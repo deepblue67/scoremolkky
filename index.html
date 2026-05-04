@@ -1,0 +1,1982 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Mölkky Score</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --forest: #2D5016;
+      --grass: #4A7C2F;
+      --wood: #C8854A;
+      --wood-dark: #A0622A;
+      --cream: #FDF6E3;
+      --sand: #E8D5A3;
+      --sky: #87CEEB;
+      --accent: #E74C3C;
+      --accent2: #F39C12;
+      --white: #FFFFFF;
+      --text: #2C1810;
+      --muted: #7A6A5A;
+      --shadow: rgba(0,0,0,0.2);
+      --radius: 16px;
+      --radius-sm: 8px;
+    }
+
+    html, body { height: 100%; overflow: hidden; }
+
+    body {
+      font-family: 'Nunito', sans-serif;
+      background: #0f1e08;
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    #root { height: 100vh; display: flex; flex-direction: column; }
+
+    /* ===== SCREENS ===== */
+    .screen {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: fadeIn 0.35s ease;
+    }
+    @keyframes fadeIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+    /* ===== HEADER ===== */
+    .app-header {
+      background: rgba(255,255,255,0.07);
+      backdrop-filter: blur(12px);
+      padding: 14px 20px 10px;
+      padding-top: max(14px, env(safe-area-inset-top));
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+      flex-shrink: 0;
+    }
+    .app-title {
+      font-family: 'Fredoka One', cursive;
+      font-size: 26px;
+      color: var(--cream);
+      letter-spacing: 1px;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    .app-title span { color: var(--wood); }
+    .header-btn {
+      background: rgba(255,255,255,0.15);
+      border: none;
+      border-radius: 10px;
+      padding: 8px 14px;
+      color: var(--cream);
+      font-family: 'Nunito', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .header-btn:active { transform: scale(0.95); background: rgba(255,255,255,0.25); }
+
+    /* ===== SCROLLABLE CONTENT ===== */
+    .scroll-content {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 16px;
+      padding-bottom: max(20px, env(safe-area-inset-bottom));
+    }
+
+    /* ===== CARDS ===== */
+    .card {
+      background: var(--cream);
+      border-radius: var(--radius);
+      padding: 18px;
+      margin-bottom: 14px;
+      box-shadow: 0 4px 20px var(--shadow);
+    }
+    .card-title {
+      font-family: 'Fredoka One', cursive;
+      font-size: 18px;
+      color: var(--forest);
+      margin-bottom: 14px;
+    }
+
+    /* ===== BUTTONS ===== */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 12px 20px;
+      font-family: 'Nunito', sans-serif;
+      font-weight: 800;
+      font-size: 15px;
+      cursor: pointer;
+      transition: all 0.18s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn:active { transform: scale(0.96); }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--grass), var(--forest));
+      color: var(--white);
+      box-shadow: 0 4px 14px rgba(74,124,47,0.4);
+    }
+    .btn-primary:active { box-shadow: 0 2px 6px rgba(74,124,47,0.3); }
+    .btn-wood {
+      background: linear-gradient(135deg, var(--wood), var(--wood-dark));
+      color: var(--white);
+      box-shadow: 0 4px 14px rgba(200,133,74,0.4);
+    }
+    .btn-danger {
+      background: linear-gradient(135deg, #e74c3c, #c0392b);
+      color: var(--white);
+    }
+    .btn-ghost {
+      background: rgba(45,80,22,0.1);
+      color: var(--forest);
+      border: 2px solid rgba(45,80,22,0.2);
+    }
+    .btn-sm { padding: 8px 14px; font-size: 13px; }
+    .btn-full { width: 100%; }
+    .btn-lg { padding: 16px 24px; font-size: 17px; border-radius: 14px; }
+
+    /* ===== HOME SCREEN ===== */
+    .home-hero {
+      padding: 28px 0 20px;
+      text-align: center;
+    }
+    .home-hero-flag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 11px;
+      font-weight: 800;
+      color: rgba(255,255,255,0.6);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+    .home-hero h1 {
+      font-family: 'Fredoka One', cursive;
+      font-size: 52px;
+      color: var(--cream);
+      letter-spacing: 2px;
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+    .home-hero h1 span { color: var(--wood); }
+    .home-hero p {
+      color: rgba(255,255,255,0.45);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    /* ===== FIELD DIAGRAM — pro style ===== */
+    .field-diagram {
+      background: #1a2e0d;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      padding: 22px 16px 18px;
+      margin-bottom: 14px;
+      position: relative;
+      overflow: hidden;
+    }
+    .field-diagram::before {
+      content: '';
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(ellipse 80% 40% at 50% 100%, rgba(74,124,47,0.18) 0%, transparent 70%),
+        radial-gradient(ellipse 60% 30% at 50% 0%, rgba(135,206,235,0.06) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .field-title {
+      font-size: 11px;
+      font-weight: 800;
+      color: rgba(255,255,255,0.3);
+      text-align: center;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 18px;
+    }
+    .distance-line {
+      display: flex; align-items: center; gap: 10px;
+      margin: 18px 0 12px;
+      color: rgba(255,255,255,0.25);
+      font-size: 11px; font-weight: 800;
+      letter-spacing: 1px;
+    }
+    .distance-line::before, .distance-line::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(255,255,255,0.12);
+    }
+    .throwing-zone {
+      display: flex; align-items: center; justify-content: center;
+      gap: 10px;
+    }
+    .thrower-icon {
+      font-size: 22px;
+      opacity: 0.7;
+    }
+    .mölkky-icon {
+      width: 10px; height: 32px;
+      background: linear-gradient(180deg, #c8854a, #8a5228);
+      border-radius: 3px 3px 6px 6px;
+      transform: rotate(-25deg);
+      opacity: 0.8;
+    }
+
+    /* ===== SETUP SCREEN ===== */
+    .team-input-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .team-color-dot {
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .input-field {
+      flex: 1;
+      padding: 10px 14px;
+      border: 2px solid rgba(45,80,22,0.2);
+      border-radius: var(--radius-sm);
+      font-family: 'Nunito', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      background: var(--white);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .input-field:focus { border-color: var(--grass); }
+    .remove-btn {
+      width: 32px; height: 32px;
+      border: none; border-radius: 50%;
+      background: rgba(231,76,60,0.12);
+      color: var(--accent);
+      font-size: 18px; font-weight: 900;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: all 0.2s;
+    }
+    .remove-btn:active { background: rgba(231,76,60,0.25); transform: scale(0.9); }
+    .target-score-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .target-score-row label { font-weight: 700; color: var(--forest); font-size: 14px; }
+    .score-chip {
+      padding: 8px 16px;
+      border-radius: 20px;
+      border: 2px solid transparent;
+      background: rgba(45,80,22,0.1);
+      color: var(--muted);
+      font-weight: 800;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .score-chip.active {
+      background: var(--forest);
+      color: var(--white);
+      border-color: var(--forest);
+    }
+
+    /* ===== GAME SCREEN ===== */
+    .game-layout {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Teams scoreboard */
+    .scoreboard {
+      background: rgba(0,0,0,0.15);
+      padding: 12px 12px 10px;
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      flex-shrink: 0;
+      border-bottom: 2px solid rgba(0,0,0,0.2);
+    }
+    .team-score-card {
+      flex: 1;
+      min-width: 120px;
+      background: #fff;
+      border-radius: 16px;
+      padding: 12px 10px 10px;
+      text-align: center;
+      border: 3px solid transparent;
+      transition: all 0.3s;
+      position: relative;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.18);
+    }
+    .team-score-card.active {
+      border-color: var(--wood);
+      box-shadow: 0 0 0 3px rgba(200,133,74,0.35), 0 4px 16px rgba(0,0,0,0.2);
+      transform: translateY(-2px);
+    }
+    .team-score-card.eliminated {
+      opacity: 0.45;
+      filter: grayscale(0.6);
+    }
+    .team-name-label {
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .team-score-value {
+      font-family: 'Fredoka One', cursive;
+      font-size: 42px;
+      color: var(--forest);
+      line-height: 1;
+    }
+    .team-score-card.active .team-score-value { color: var(--wood-dark); }
+    .team-score-remain {
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--muted);
+      margin-top: 3px;
+    }
+    .active-arrow {
+      position: absolute;
+      top: -12px; left: 50%; transform: translateX(-50%);
+      font-size: 16px;
+    }
+    .elim-badge {
+      position: absolute;
+      top: 4px; right: 4px;
+      font-size: 11px;
+      background: var(--accent);
+      color: white;
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-weight: 800;
+    }
+    .miss-indicator { margin-top: 6px; }
+    .miss-dot { background: rgba(0,0,0,0.12); }
+    .miss-dot.filled { background: var(--accent); }
+
+    /* Current turn display */
+    .current-turn {
+      padding: 10px 16px 6px;
+      flex-shrink: 0;
+    }
+    .turn-label {
+      font-family: 'Fredoka One', cursive;
+      font-size: 18px;
+      color: var(--cream);
+      text-align: center;
+    }
+    .turn-label span { color: var(--wood); }
+
+    /* Pins grid for scoring */
+    .pins-grid-container {
+      padding: 8px 16px;
+      flex-shrink: 0;
+    }
+    .pins-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 8px;
+      max-width: 420px;
+      margin: 0 auto;
+    }
+    .pin-btn {
+      aspect-ratio: 1;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #f5deb3, #d4a574);
+      color: var(--wood-dark);
+      font-family: 'Fredoka One', cursive;
+      font-size: 18px;
+      cursor: pointer;
+      box-shadow: 0 3px 0 var(--wood-dark), 0 5px 12px rgba(0,0,0,0.25);
+      transition: all 0.12s;
+      -webkit-tap-highlight-color: transparent;
+      display: flex; align-items: center; justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .pin-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--wood-dark), 0 2px 6px rgba(0,0,0,0.2); }
+    .pin-btn.selected {
+      background: linear-gradient(135deg, var(--grass), var(--forest));
+      color: var(--white);
+      box-shadow: 0 3px 0 var(--forest), 0 5px 12px rgba(74,124,47,0.35);
+      transform: scale(1.05);
+    }
+    .pin-btn.fallen {
+      background: linear-gradient(135deg, #bdc3c7, #95a5a6);
+      color: rgba(255,255,255,0.6);
+      box-shadow: 0 2px 0 #7f8c8d, 0 3px 8px rgba(0,0,0,0.15);
+    }
+    .pin-btn.fallen.selected {
+      background: linear-gradient(135deg, var(--grass), var(--forest));
+      color: var(--white);
+    }
+    .pin-btn .check-mark {
+      position: absolute;
+      top: 2px; right: 4px;
+      font-size: 10px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .pin-btn.selected .check-mark { opacity: 1; }
+
+    /* Action row */
+    .action-row {
+      padding: 8px 16px;
+      display: flex;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    .throw-score-preview {
+      flex: 1;
+      background: rgba(255,255,255,0.1);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 0 12px;
+    }
+    .throw-score-preview .label { color: rgba(255,255,255,0.6); font-size: 13px; font-weight: 700; }
+    .throw-score-preview .value {
+      font-family: 'Fredoka One', cursive;
+      font-size: 28px;
+      color: var(--cream);
+      min-width: 32px;
+      text-align: center;
+    }
+    .confirm-btn {
+      padding: 0 22px;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--wood), var(--wood-dark));
+      color: var(--white);
+      font-family: 'Fredoka One', cursive;
+      font-size: 16px;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(200,133,74,0.4);
+      transition: all 0.15s;
+      height: 52px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .confirm-btn:active { transform: translateY(1px) scale(0.98); }
+    .confirm-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Miss button */
+    .miss-btn {
+      display: flex; align-items: center; justify-content: center;
+      gap: 6px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 12px;
+      background: rgba(231,76,60,0.15);
+      color: #e74c3c;
+      font-family: 'Nunito', sans-serif;
+      font-weight: 800;
+      font-size: 14px;
+      cursor: pointer;
+      border: 2px solid rgba(231,76,60,0.25);
+      transition: all 0.15s;
+      height: 52px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .miss-btn:active { background: rgba(231,76,60,0.25); }
+
+    /* History */
+    .history-strip {
+      padding: 6px 16px;
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      flex-shrink: 0;
+      align-items: center;
+    }
+    .history-label { font-size: 11px; color: rgba(255,255,255,0.4); font-weight: 700; flex-shrink: 0; }
+    .history-chip {
+      flex-shrink: 0;
+      background: rgba(255,255,255,0.1);
+      border-radius: 20px;
+      padding: 4px 10px;
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--cream);
+    }
+    .history-chip.miss { color: #e74c3c; }
+    .history-chip.bonus { color: var(--accent2); }
+
+    /* Bottom undo row */
+    .undo-row {
+      padding: 6px 16px;
+      display: flex;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .undo-btn {
+      display: flex; align-items: center; gap: 6px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 10px;
+      padding: 8px 18px;
+      color: rgba(255,255,255,0.6);
+      font-family: 'Nunito', sans-serif;
+      font-size: 13px; font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .undo-btn:active { background: rgba(255,255,255,0.15); }
+    .undo-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    /* ===== WIN SCREEN ===== */
+    .win-screen {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+    }
+    .win-emoji { font-size: 72px; animation: bounce 0.6s ease infinite alternate; }
+    @keyframes bounce { from { transform: translateY(0) scale(1); } to { transform: translateY(-12px) scale(1.05); } }
+    .win-title {
+      font-family: 'Fredoka One', cursive;
+      font-size: 42px;
+      color: var(--cream);
+      margin: 12px 0 4px;
+      text-shadow: 0 3px 12px rgba(0,0,0,0.3);
+    }
+    .win-team {
+      font-family: 'Fredoka One', cursive;
+      font-size: 28px;
+      color: var(--wood);
+      margin-bottom: 20px;
+    }
+    .win-stats {
+      background: rgba(255,255,255,0.1);
+      border-radius: var(--radius);
+      padding: 16px 24px;
+      margin-bottom: 24px;
+      width: 100%;
+      max-width: 320px;
+    }
+    .win-stat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      font-size: 14px;
+      color: rgba(255,255,255,0.8);
+    }
+    .win-stat-row:last-child { border-bottom: none; }
+    .win-stat-row strong { color: var(--cream); font-weight: 800; }
+
+    /* ===== HISTORY SCREEN ===== */
+    .history-item {
+      background: var(--cream);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+    }
+    .history-item-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 8px;
+    }
+    .history-item-title {
+      font-family: 'Fredoka One', cursive;
+      font-size: 16px;
+      color: var(--forest);
+    }
+    .history-item-date {
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .history-item-teams {
+      display: flex; gap: 6px; flex-wrap: wrap;
+    }
+    .history-team-pill {
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 800;
+      color: white;
+    }
+    .history-winner-badge {
+      background: linear-gradient(135deg, var(--grass), var(--forest));
+      display: flex; align-items: center; gap: 4px;
+    }
+
+    /* ===== TOAST / FEEDBACK ===== */
+    .toast {
+      position: fixed;
+      bottom: max(80px, calc(env(safe-area-inset-bottom) + 70px));
+      left: 50%; transform: translateX(-50%) translateY(20px);
+      background: rgba(0,0,0,0.85);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 20px;
+      font-size: 14px; font-weight: 700;
+      pointer-events: none;
+      opacity: 0;
+      transition: all 0.3s;
+      white-space: nowrap;
+      z-index: 1000;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ===== MISS COUNTER ===== */
+    .miss-indicator {
+      display: flex; gap: 4px; justify-content: center;
+      margin-top: 4px;
+    }
+    .miss-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.2);
+      transition: background 0.2s;
+    }
+    .miss-dot.filled { background: #e74c3c; }
+
+    /* ===== LANDSCAPE ===== */
+    @media (orientation: landscape) {
+      .game-layout { flex-direction: row; }
+      .scoreboard {
+        flex-direction: column;
+        overflow-y: auto; overflow-x: hidden;
+        border-bottom: none;
+        border-right: 1px solid rgba(255,255,255,0.1);
+        min-width: 110px;
+        max-width: 130px;
+        padding: 10px 8px;
+        gap: 8px;
+      }
+      .team-score-card { min-width: unset; width: 100%; }
+      .game-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+      .pins-grid { max-width: 320px; }
+    }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+
+<script>
+const { useState, useEffect, useRef } = React;
+
+// ============================================================
+// CONSTANTS
+// ============================================================
+const TEAM_COLORS = ['#E74C3C','#3498DB','#2ECC71','#F39C12','#9B59B6','#1ABC9C'];
+const ACTUAL_PINS = [7,9,8,10,11,12,6,5,4,3,2,1];
+
+function formatDate(ts) {
+  const d = new Date(ts);
+  return d.toLocaleDateString('fr-FR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+function formatDuration(ms) {
+  if (!ms || ms < 0) return '—';
+  const m = Math.floor(ms / 60000);
+  const s = Math.floor((ms % 60000) / 1000);
+  if (m > 59) return `${Math.floor(m/60)}h${String(m%60).padStart(2,'0')}`;
+  if (m > 0) return `${m} min ${String(s).padStart(2,'0')} sec`;
+  return `${s} sec`;
+}
+
+// ============================================================
+// STORAGE — partie en cours + historique complet
+// ============================================================
+const KEY_CURRENT = 'molky_current_game_v2';
+const KEY_HISTORY = 'molky_history_v2';
+
+function loadCurrentGame() {
+  try { const r = localStorage.getItem(KEY_CURRENT); return r ? JSON.parse(r) : null; } catch { return null; }
+}
+function saveCurrentGame(data) {
+  try { localStorage.setItem(KEY_CURRENT, JSON.stringify({ ...data, savedAt: Date.now() })); } catch {}
+}
+function clearCurrentGame() {
+  try { localStorage.removeItem(KEY_CURRENT); } catch {}
+}
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(KEY_HISTORY) || '[]'); } catch { return []; }
+}
+function saveHistory(h) {
+  try { localStorage.setItem(KEY_HISTORY, JSON.stringify(h)); } catch {}
+}
+function addGameToHistory(entry) {
+  const h = loadHistory();
+  h.unshift(entry);
+  saveHistory(h.slice(0, 50));
+}
+
+// ============================================================
+// FIELD DIAGRAM — clean minimal top-view
+// ============================================================
+function FieldDiagram() {
+  const SLOT = 48;
+  const R = 18;
+  const TRUNK_H = 16;
+  const ROW_H = 56;
+
+  const rows = [
+    { pins: [7, 9, 8],      startX: SLOT * 0.5 },
+    { pins: [5, 11, 12, 6], startX: 0 },
+    { pins: [3, 10, 4],     startX: SLOT * 0.5 },
+    { pins: [1, 2],          startX: SLOT * 1.0 },
+  ];
+
+  const totalW = 4 * SLOT;
+  const totalH = rows.length * ROW_H + R + TRUNK_H;
+
+  return React.createElement('div', { className: 'field-diagram' },
+    React.createElement('div', { className: 'field-title' }, 'Disposition des quilles'),
+
+    React.createElement('div', { style: { display: 'flex', justifyContent: 'center', position: 'relative', zIndex: 1 } },
+      React.createElement('svg', {
+        viewBox: `0 0 ${totalW} ${totalH}`,
+        style: { width: '100%', maxWidth: '260px', height: 'auto', overflow: 'visible' }
+      },
+        React.createElement('defs', null,
+          React.createElement('radialGradient', { id: 'pinG', cx: '38%', cy: '32%', r: '60%' },
+            React.createElement('stop', { offset: '0%', stopColor: '#e8c98a' }),
+            React.createElement('stop', { offset: '100%', stopColor: '#b87d3a' })
+          ),
+          React.createElement('filter', { id: 'pinShadow', x:'-20%', y:'-20%', width:'140%', height:'140%' },
+            React.createElement('feDropShadow', { dx:'0', dy:'2', stdDeviation:'2', floodColor:'#000', floodOpacity:'0.5' })
+          )
+        ),
+        ...rows.flatMap((row, ri) =>
+          row.pins.map((num, ci) => {
+            const cx = row.startX + ci * SLOT + SLOT / 2;
+            const cy = ri * ROW_H + R + 4;
+            return React.createElement('g', { key: num },
+              // trunk shadow
+              React.createElement('rect', {
+                x: cx - 3.5, y: cy + R - 2, width: 7, height: TRUNK_H + 2,
+                rx: 2, fill: 'rgba(0,0,0,0.3)'
+              }),
+              // trunk
+              React.createElement('rect', {
+                x: cx - 3, y: cy + R - 2, width: 6, height: TRUNK_H,
+                rx: 2, fill: '#7a4a1e'
+              }),
+              // pin shadow
+              React.createElement('circle', { cx: cx + 1, cy: cy + 1.5, r: R, fill: 'rgba(0,0,0,0.3)' }),
+              // pin body
+              React.createElement('circle', {
+                cx, cy, r: R,
+                fill: 'url(#pinG)',
+                stroke: '#8a5a22', strokeWidth: 1.5,
+              }),
+              // highlight glint
+              React.createElement('ellipse', {
+                cx: cx - R * 0.3, cy: cy - R * 0.3,
+                rx: R * 0.28, ry: R * 0.18,
+                fill: 'rgba(255,255,255,0.3)', transform: `rotate(-35,${cx},${cy})`
+              }),
+              // number
+              React.createElement('text', {
+                x: cx, y: cy + 6,
+                textAnchor: 'middle',
+                fontFamily: "'Fredoka One', cursive",
+                fontSize: num >= 10 ? 13 : 15,
+                fill: '#3a1e08',
+                fontWeight: 'bold'
+              }, num)
+            );
+          })
+        )
+      )
+    ),
+
+    React.createElement('div', { className: 'distance-line' }, '3,5 m'),
+    React.createElement('div', { className: 'throwing-zone' },
+      React.createElement('div', { className: 'thrower-icon' }, '🧑'),
+      React.createElement('div', { className: 'mölkky-icon' }),
+      React.createElement('span', { style: { color: 'rgba(255,255,255,0.3)', fontSize: '11px', fontWeight: '800', letterSpacing: '1px', textTransform: 'uppercase' } }, 'Zone de lancer')
+    )
+  );
+}
+
+// ============================================================
+// HOME SCREEN
+// ============================================================
+function HomeScreen({ onSetup, onHistory, onResume, historyCount, savedGame }) {
+  return React.createElement('div', { className: 'screen' },
+    // ---- Header ----
+    React.createElement('div', { className: 'app-header' },
+      React.createElement('div', { className: 'app-title' },
+        'Möl', React.createElement('span', null, 'kky')
+      ),
+      React.createElement('div', { style: { display:'flex', gap:'8px' } },
+        historyCount > 0 && React.createElement('button', {
+          className: 'header-btn', onClick: onHistory
+        }, `📊 ${historyCount}`)
+      )
+    ),
+
+    React.createElement('div', { className: 'scroll-content' },
+
+      // ---- Hero ----
+      React.createElement('div', { className: 'home-hero' },
+        React.createElement('div', { className: 'home-hero-flag' }, '🇫🇮  Finlande · 1996'),
+        React.createElement('h1', null, 'MÖL', React.createElement('span', null, 'KKY')),
+        React.createElement('p', null, 'Jeu de quilles de précision')
+      ),
+
+      // ---- Resume banner ----
+      savedGame && React.createElement('div', {
+        style: {
+          background: 'rgba(200,133,74,0.1)',
+          border: '1px solid rgba(200,133,74,0.4)',
+          borderRadius: '14px',
+          padding: '14px 16px',
+          marginBottom: '14px',
+        }
+      },
+        React.createElement('div', { style: { display:'flex', alignItems:'center', gap:'10px', marginBottom:'10px' } },
+          React.createElement('div', { style:{ width:36, height:36, borderRadius:'50%', background:'rgba(200,133,74,0.2)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'18px', flexShrink:0 } }, '💾'),
+          React.createElement('div', null,
+            React.createElement('div', { style: { fontWeight:'800', fontSize:'14px', color: 'rgba(255,255,255,0.9)' } }, 'Partie en cours'),
+            React.createElement('div', { style: { fontSize:'11px', color:'rgba(255,255,255,0.4)', marginTop:'2px', letterSpacing:'0.5px' } },
+              `Sauvegardée ${formatDate(savedGame.savedAt)} · Round ${savedGame.round}`
+            )
+          )
+        ),
+        React.createElement('div', { style: { display:'flex', gap:'6px', flexWrap:'wrap', marginBottom:'12px' } },
+          ...savedGame.teams.map((t, i) =>
+            React.createElement('span', {
+              key: i,
+              style: {
+                background: t.color + '18',
+                border: `1px solid ${t.color}66`,
+                borderRadius: '6px',
+                padding: '4px 10px',
+                fontSize: '12px', fontWeight: '800',
+                color: t.color
+              }
+            }, `${t.name}  ${t.score}`)
+          )
+        ),
+        React.createElement('div', { style: { display:'flex', gap:'8px' } },
+          React.createElement('button', {
+            className: 'btn btn-wood btn-full', onClick: onResume,
+            style: { fontSize:'14px' }
+          }, '▶  Reprendre la partie'),
+          React.createElement('button', {
+            style: { background:'transparent', border:'1px solid rgba(255,255,255,0.15)', borderRadius:'8px', padding:'10px 14px', color:'rgba(255,255,255,0.4)', fontSize:'13px', cursor:'pointer', flexShrink:0 },
+            onClick: () => { clearCurrentGame(); onSetup(); }
+          }, '🗑')
+        )
+      ),
+
+      // ---- Diagram ----
+      React.createElement(FieldDiagram),
+
+      // ---- Rules ----
+      React.createElement('div', {
+        style: {
+          background: 'rgba(255,255,255,0.04)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: '14px',
+          padding: '16px',
+          marginBottom: '14px'
+        }
+      },
+        React.createElement('div', { style:{ fontSize:'11px', fontWeight:'800', color:'rgba(255,255,255,0.3)', letterSpacing:'2px', textTransform:'uppercase', marginBottom:'12px' } }, 'Règles essentielles'),
+        ...[
+          { icon: '🎯', rule: '1 quille renversée → son numéro en points' },
+          { icon: '🎳', rule: 'Plusieurs quilles → nombre de quilles' },
+          { icon: '💥', rule: 'Dépasser 50 → retombe à 25' },
+          { icon: '❌', rule: '3 ratés consécutifs → élimination' },
+          { icon: '🏆', rule: 'Atteindre exactement 50 pour gagner' },
+        ].map((r, i) =>
+          React.createElement('div', {
+            key: i,
+            style: {
+              display: 'flex', alignItems: 'center', gap: '12px',
+              padding: '8px 0',
+              borderBottom: i < 4 ? '1px solid rgba(255,255,255,0.05)' : 'none'
+            }
+          },
+            React.createElement('span', { style:{ fontSize:'16px', flexShrink:0, width:'22px', textAlign:'center' } }, r.icon),
+            React.createElement('span', { style:{ fontSize:'13px', color:'rgba(255,255,255,0.65)', fontWeight:'600' } }, r.rule)
+          )
+        )
+      ),
+
+      // ---- CTA ----
+      React.createElement('button', {
+        className: 'btn btn-primary btn-full btn-lg',
+        onClick: onSetup,
+        style: { letterSpacing: '1px' }
+      }, '🎯  Nouvelle Partie')
+    )
+  );
+}
+
+// ============================================================
+// RULE INFO POPUP
+// ============================================================
+function RulePopup({ rule, onClose }) {
+  const rules = {
+    elimination: {
+      title: '❌ Élimination après 3 ratés',
+      color: '#e74c3c',
+      icon: '🚫',
+      content: [
+        { heading: 'La règle', text: 'Un joueur qui rate 3 lancers consécutifs est immédiatement éliminé de la partie.' },
+        { heading: 'Qu\'est-ce qu\'un raté ?', text: 'Un lancer est raté si aucune quille n\'est renversée. Dès qu\'une quille tombe, le compteur de ratés revient à zéro.' },
+        { heading: 'Pourquoi cette règle ?', text: 'Elle évite qu\'un joueur en difficulté ne ralentisse indéfiniment la partie, et récompense la précision.' },
+        { heading: 'Version sans élimination', text: 'Les ratés ne font perdre aucun point et le joueur continue à jouer, peu importe combien de fois il rate.' }
+      ]
+    },
+    overflow: {
+      title: '💥 Dépassement du score cible',
+      color: '#f39c12',
+      icon: '⚠️',
+      content: [
+        { heading: 'Le principe', text: 'Si un joueur dépasse le score cible (ex. 50), son score est ramené à 25.' },
+        { heading: 'Pourquoi 25 ?', text: 'Le règlement officiel utilise 25 comme score de pénalité, soit la moitié de 50. C\'est une façon de "punir" une mauvaise évaluation sans éliminer le joueur.' },
+        { heading: 'Immédiatement', text: 'Le score retombe à 25 dès le lancer qui dépasse.' },
+        { heading: 'Après 1, 2 ou 3 essais', text: 'Mode maison : le joueur a droit à 1, 2 ou 3 tentatives supplémentaires pour atteindre exactement le score cible avant de retomber à 25. Cela donne une chance de "rattraper" un dépassement et rend la fin de partie plus tendue !' }
+      ]
+    }
+  };
+  const r = rules[rule];
+  if (!r) return null;
+  return React.createElement('div', {
+    style: {
+      position:'fixed', inset:0, background:'rgba(0,0,0,0.65)', zIndex:2000,
+      display:'flex', alignItems:'flex-end', justifyContent:'center',
+      padding:'0 0 env(safe-area-inset-bottom)'
+    },
+    onClick: onClose
+  },
+    React.createElement('div', {
+      style: {
+        background:'#fff', borderRadius:'24px 24px 0 0', padding:'24px 20px 32px',
+        width:'100%', maxWidth:'480px', maxHeight:'80vh', overflowY:'auto',
+        animation:'slideUp 0.3s ease'
+      },
+      onClick: e => e.stopPropagation()
+    },
+      React.createElement('style', null, '@keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }'),
+      React.createElement('div', { style:{display:'flex', alignItems:'center', gap:'10px', marginBottom:'18px'} },
+        React.createElement('div', { style:{fontSize:'28px'} }, r.icon),
+        React.createElement('div', { style:{fontFamily:"'Fredoka One',cursive", fontSize:'18px', color: r.color, flex:1} }, r.title),
+        React.createElement('button', {
+          onClick: onClose,
+          style:{ background:'#f0f0f0', border:'none', borderRadius:'50%', width:'32px', height:'32px', fontSize:'16px', cursor:'pointer', fontWeight:'900', color:'#666' }
+        }, '×')
+      ),
+      ...r.content.map((block, i) =>
+        React.createElement('div', { key:i, style:{marginBottom:'14px'} },
+          React.createElement('div', { style:{fontWeight:'900', color:'#2d5016', fontSize:'14px', marginBottom:'4px'} }, block.heading),
+          React.createElement('div', { style:{fontSize:'14px', color:'#4a3a2a', lineHeight:'1.6'} }, block.text)
+        )
+      ),
+      React.createElement('button', {
+        className: 'btn btn-primary btn-full',
+        onClick: onClose,
+        style:{marginTop:'8px'}
+      }, 'Compris !')
+    )
+  );
+}
+
+// ============================================================
+// SETUP SCREEN
+// ============================================================
+function SetupScreen({ onBack, onStart }) {
+  const [teams, setTeams] = useState([
+    { name: 'Équipe 1', color: TEAM_COLORS[0] },
+    { name: 'Équipe 2', color: TEAM_COLORS[1] }
+  ]);
+  const [targetScore, setTargetScore] = useState(50);
+  const [eliminationOn, setEliminationOn] = useState(true);
+  const [overflowGrace, setOverflowGrace] = useState(0); // 0=immédiat, 1,2,3=essais bonus
+  const [popup, setPopup] = useState(null); // 'elimination' | 'overflow'
+
+  const addTeam = () => {
+    if (teams.length >= 6) return;
+    setTeams(t => [...t, { name: `Équipe ${t.length + 1}`, color: TEAM_COLORS[t.length] }]);
+  };
+  const removeTeam = (i) => {
+    if (teams.length <= 2) return;
+    setTeams(t => t.filter((_, idx) => idx !== i));
+  };
+  const updateName = (i, name) => {
+    setTeams(t => t.map((team, idx) => idx === i ? { ...team, name } : team));
+  };
+
+  const canStart = teams.every(t => t.name.trim().length > 0);
+
+  // Toggle switch component
+  function Toggle({ value, onChange }) {
+    return React.createElement('div', {
+      onClick: () => onChange(!value),
+      style: {
+        width: '52px', height: '28px', borderRadius: '14px', flexShrink:0,
+        background: value ? 'linear-gradient(135deg,#4a7c2f,#2d5016)' : '#ccc',
+        position: 'relative', cursor: 'pointer', transition: 'background 0.25s',
+        boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.2)'
+      }
+    },
+      React.createElement('div', {
+        style: {
+          position:'absolute', top:'3px',
+          left: value ? '27px' : '3px',
+          width:'22px', height:'22px', borderRadius:'50%',
+          background:'white', transition:'left 0.25s',
+          boxShadow:'0 2px 4px rgba(0,0,0,0.25)'
+        }
+      })
+    );
+  }
+
+  // Option chip row
+  function ChipRow({ options, value, onChange }) {
+    return React.createElement('div', { style:{display:'flex', gap:'6px', flexWrap:'wrap'} },
+      options.map(opt =>
+        React.createElement('button', {
+          key: opt.value,
+          onClick: () => onChange(opt.value),
+          style: {
+            padding:'7px 14px', borderRadius:'20px', border:'2px solid',
+            borderColor: value === opt.value ? '#2d5016' : 'rgba(45,80,22,0.2)',
+            background: value === opt.value ? '#2d5016' : 'transparent',
+            color: value === opt.value ? 'white' : '#2d5016',
+            fontFamily:"'Nunito',sans-serif", fontWeight:'800', fontSize:'13px',
+            cursor:'pointer', transition:'all 0.18s'
+          }
+        }, opt.label)
+      )
+    );
+  }
+
+  return React.createElement('div', { className: 'screen' },
+    popup && React.createElement(RulePopup, { rule: popup, onClose: () => setPopup(null) }),
+
+    React.createElement('div', { className: 'app-header' },
+      React.createElement('button', { className: 'header-btn', onClick: onBack }, '← Retour'),
+      React.createElement('div', { className: 'app-title' }, 'Nouvelle partie'),
+      React.createElement('div', { style: { width: '70px' } })
+    ),
+    React.createElement('div', { className: 'scroll-content' },
+
+      // ---- Équipes ----
+      React.createElement('div', { className: 'card' },
+        React.createElement('div', { className: 'card-title' }, '👥 Équipes'),
+        ...teams.map((team, i) =>
+          React.createElement('div', { key: i, className: 'team-input-wrap' },
+            React.createElement('div', { className: 'team-color-dot', style: { background: team.color } }),
+            React.createElement('input', {
+              className: 'input-field', type: 'text', value: team.name,
+              placeholder: `Équipe ${i+1}`,
+              onChange: e => updateName(i, e.target.value)
+            }),
+            teams.length > 2 && React.createElement('button', { className: 'remove-btn', onClick: () => removeTeam(i) }, '×')
+          )
+        ),
+        teams.length < 6 && React.createElement('button', {
+          className: 'btn btn-ghost btn-sm', onClick: addTeam, style: { marginTop: '6px' }
+        }, '+ Ajouter une équipe')
+      ),
+
+      // ---- Score cible ----
+      React.createElement('div', { className: 'card' },
+        React.createElement('div', { className: 'card-title' }, '🎯 Score cible'),
+        React.createElement('div', { className: 'target-score-row' },
+          [40, 50].map(s =>
+            React.createElement('button', {
+              key: s,
+              className: `score-chip ${targetScore === s ? 'active' : ''}`,
+              onClick: () => setTargetScore(s)
+            }, `${s} pts`)
+          )
+        )
+      ),
+
+      // ---- Règle : Élimination ----
+      React.createElement('div', { className: 'card' },
+        React.createElement('div', { style:{display:'flex', alignItems:'center', gap:'10px', marginBottom:'12px'} },
+          React.createElement('div', { style:{flex:1} },
+            React.createElement('div', { style:{fontFamily:"'Fredoka One',cursive", fontSize:'16px', color:'#2d5016', display:'flex', alignItems:'center', gap:'6px'} },
+              '❌ Élimination après 3 ratés',
+              React.createElement('button', {
+                onClick: () => setPopup('elimination'),
+                style:{background:'rgba(45,80,22,0.12)', border:'none', borderRadius:'50%', width:'22px', height:'22px', cursor:'pointer', color:'#2d5016', fontWeight:'900', fontSize:'13px', display:'inline-flex', alignItems:'center', justifyContent:'center'}
+              }, '?')
+            ),
+            React.createElement('div', { style:{fontSize:'12px', color:'#7a6a5a', marginTop:'3px'} },
+              eliminationOn ? '3 ratés consécutifs = éliminé(e)' : 'Les ratés n\'éliminent pas'
+            )
+          ),
+          React.createElement(Toggle, { value: eliminationOn, onChange: setEliminationOn })
+        )
+      ),
+
+      // ---- Règle : Dépassement ----
+      React.createElement('div', { className: 'card' },
+        React.createElement('div', { style:{display:'flex', alignItems:'center', gap:'6px', marginBottom:'4px'} },
+          React.createElement('div', { style:{fontFamily:"'Fredoka One',cursive", fontSize:'16px', color:'#2d5016'} }, '💥 Dépassement du score cible'),
+          React.createElement('button', {
+            onClick: () => setPopup('overflow'),
+            style:{background:'rgba(45,80,22,0.12)', border:'none', borderRadius:'50%', width:'22px', height:'22px', cursor:'pointer', color:'#2d5016', fontWeight:'900', fontSize:'13px', display:'inline-flex', alignItems:'center', justifyContent:'center', flexShrink:0}
+          }, '?')
+        ),
+        React.createElement('div', { style:{fontSize:'12px', color:'#7a6a5a', marginBottom:'12px'} },
+          overflowGrace === 0
+            ? 'Retombe à 25 immédiatement'
+            : `${overflowGrace} essai${overflowGrace > 1 ? 's' : ''} supplémentaire${overflowGrace > 1 ? 's' : ''} avant de retomber à 25`
+        ),
+        React.createElement(ChipRow, {
+          value: overflowGrace,
+          onChange: setOverflowGrace,
+          options: [
+            { value: 0, label: 'Immédiat' },
+            { value: 1, label: '+1 essai' },
+            { value: 2, label: '+2 essais' },
+            { value: 3, label: '+3 essais' }
+          ]
+        })
+      ),
+
+      React.createElement('button', {
+        className: 'btn btn-primary btn-full btn-lg',
+        disabled: !canStart,
+        onClick: () => onStart(teams, targetScore, { eliminationOn, overflowGrace })
+      }, '🏁 Démarrer !')
+    )
+  );
+}
+
+// ============================================================
+// EVENT POPUP — contextual explanation after a throw event
+// ============================================================
+function EventPopup({ popup, onClose }) {
+  const { type, teamName, teamColor, data } = popup;
+
+  const configs = {
+    overflow_penalized: {
+      emoji: '💥',
+      bg: 'linear-gradient(135deg,#fff5e6,#ffe0b0)',
+      border: '#f39c12',
+      titleColor: '#c0780a',
+      title: `${teamName} retombe à 25 !`,
+      lines: [
+        { icon: '🎯', text: `Score visé : ${data.targetScore} pts` },
+        { icon: '📈', text: `Score atteint : ${data.scoreBefore} pts — dépassement !` },
+        { icon: '📉', text: `Nouveau score : 25 pts` },
+      ],
+      explanation: `En Mölkky, si un joueur dépasse le score cible, son score est ramené à 25. C'est la règle officielle : mieux vaut être précis qu'ambitieux !`,
+      tip: `💡 Il faut maintenant marquer exactement ${data.targetScore - 25} pts.`
+    },
+    overflow_grace: {
+      emoji: '⚠️',
+      bg: 'linear-gradient(135deg,#fffde6,#fff9c4)',
+      border: '#f1c40f',
+      titleColor: '#b7860a',
+      title: `Dépassement pour ${teamName} !`,
+      lines: [
+        { icon: '📈', text: `Score obtenu : ${data.scoreBefore} + ${data.score} = ${data.scoreBefore + data.score} pts` },
+        { icon: '🎯', text: `Score cible : ${data.targetScore} pts — dépassé !` },
+        { icon: '🔁', text: `Essais de grâce restants : ${data.remaining} sur ${data.graceTotal}` },
+      ],
+      explanation: `Dans cette partie, le joueur a droit à ${data.graceTotal} essai${data.graceTotal > 1 ? 's' : ''} supplémentaire${data.graceTotal > 1 ? 's' : ''} pour atteindre exactement le score cible avant de retomber à 25.`,
+      tip: data.remaining > 0
+        ? `💡 Encore ${data.remaining} essai${data.remaining > 1 ? 's' : ''} avant de retomber à 25 !`
+        : `⚠️ C'était le dernier essai — prochain dépassement = retombe à 25 !`
+    },
+    eliminated: {
+      emoji: '❌',
+      bg: 'linear-gradient(135deg,#fff0f0,#ffd6d6)',
+      border: '#e74c3c',
+      titleColor: '#c0392b',
+      title: `${teamName} est éliminé(e) !`,
+      lines: [
+        { icon: '❌', text: `3 ratés consécutifs` },
+        { icon: '🚫', text: `${teamName} ne peut plus jouer` },
+      ],
+      explanation: `En Mölkky, un joueur qui rate 3 lancers de suite est éliminé. Un raté, c'est un lancer où aucune quille ne tombe. Le compteur repart à zéro dès qu'une quille est renversée.`,
+      tip: `💡 Les autres joueurs continuent jusqu'à ce qu'il n'en reste qu'un ou qu'un joueur atteigne exactement ${50} pts.`
+    }
+  };
+
+  const cfg = configs[type];
+  if (!cfg) return null;
+
+  return React.createElement('div', {
+    style: {
+      position: 'fixed', inset: 0, zIndex: 3000,
+      background: 'rgba(0,0,0,0.6)',
+      display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+      padding: '0'
+    },
+    onClick: onClose
+  },
+    React.createElement('div', {
+      style: {
+        background: cfg.bg,
+        border: `3px solid ${cfg.border}`,
+        borderRadius: '24px 24px 0 0',
+        padding: '24px 20px 36px',
+        width: '100%', maxWidth: '480px',
+        animation: 'slideUp 0.35s cubic-bezier(0.34,1.56,0.64,1)'
+      },
+      onClick: e => e.stopPropagation()
+    },
+      // Header
+      React.createElement('div', { style: { display:'flex', alignItems:'center', gap:'12px', marginBottom:'16px' } },
+        React.createElement('div', { style: { fontSize:'40px', lineHeight:1 } }, cfg.emoji),
+        React.createElement('div', { style: { flex:1 } },
+          React.createElement('div', {
+            style: { fontFamily:"'Fredoka One',cursive", fontSize:'20px', color: cfg.titleColor, lineHeight:1.2 }
+          }, cfg.title),
+          React.createElement('div', {
+            style: { fontSize:'12px', color:'#888', marginTop:'3px', fontWeight:'700' }
+          }, 'Appuie n\'importe où pour continuer')
+        ),
+        React.createElement('div', {
+          style: { width:'10px', height:'10px', borderRadius:'50%', background: teamColor, flexShrink:0, boxShadow:`0 0 0 3px ${teamColor}44` }
+        })
+      ),
+
+      // Score lines
+      React.createElement('div', {
+        style: {
+          background: 'rgba(255,255,255,0.7)', borderRadius:'12px',
+          padding:'12px 14px', marginBottom:'14px'
+        }
+      },
+        ...cfg.lines.map((line, i) =>
+          React.createElement('div', {
+            key: i,
+            style: { display:'flex', alignItems:'center', gap:'10px', padding:'5px 0',
+              borderBottom: i < cfg.lines.length-1 ? '1px solid rgba(0,0,0,0.07)' : 'none' }
+          },
+            React.createElement('span', { style:{ fontSize:'18px', flexShrink:0 } }, line.icon),
+            React.createElement('span', { style:{ fontSize:'14px', fontWeight:'700', color:'#3a2a1a' } }, line.text)
+          )
+        )
+      ),
+
+      // Explanation
+      React.createElement('div', {
+        style: { fontSize:'13px', color:'#5a4a3a', lineHeight:'1.65', marginBottom:'12px' }
+      }, cfg.explanation),
+
+      // Tip
+      cfg.tip && React.createElement('div', {
+        style: {
+          background: 'rgba(255,255,255,0.6)', borderRadius:'10px',
+          padding:'10px 12px', fontSize:'13px', fontWeight:'800', color:'#3a2a1a'
+        }
+      }, cfg.tip),
+
+      // Close button
+      React.createElement('button', {
+        onClick: onClose,
+        className: 'btn btn-primary btn-full',
+        style: { marginTop:'16px', fontSize:'15px' }
+      }, 'OK, j\'ai compris !')
+    )
+  );
+}
+
+// ============================================================
+// GAME SCREEN
+// ============================================================
+function GameScreen({ teams: initialTeams, targetScore, rules, onEnd, resumeState }) {
+  const { eliminationOn = true, overflowGrace = 0 } = rules || {};
+
+  const initState = () => resumeState || {
+    teams: initialTeams.map(t => ({
+      ...t,
+      score: 0,
+      misses: 0,
+      overflowStrikes: 0, // how many overflow throws used in grace period
+      totalThrows: 0,
+      totalScore: 0,
+      maxThrow: 0,
+      overflows: 0,
+      eliminated: false,
+      history: []
+    })),
+    currentTeamIdx: 0,
+    selectedPins: [],
+    throws: [],
+    round: 1,
+    startedAt: Date.now(),
+    targetScore,
+    rules: { eliminationOn, overflowGrace }
+  };
+
+  const [state, setState] = useState(initState);
+  const [winner, setWinner] = useState(null);
+  const [toast, setToast] = useState({ msg: '', show: false });
+  const [eventPopup, setEventPopup] = useState(null); // { type, teamName, teamColor, data }
+  const toastTimer = useRef(null);
+
+  // Auto-save on every state change
+  useEffect(() => {
+    if (!winner) saveCurrentGame(state);
+  }, [state, winner]);
+
+  function showToast(msg) {
+    clearTimeout(toastTimer.current);
+    setToast({ msg, show: true });
+    toastTimer.current = setTimeout(() => setToast(t => ({ ...t, show: false })), 2000);
+  }
+
+  function showEventPopup(type, teamName, teamColor, data) {
+    setEventPopup({ type, teamName, teamColor, data });
+  }
+
+  function calcThrowScore(pins) {
+    if (pins.length === 0) return 0;
+    if (pins.length === 1) return pins[0];
+    return pins.length;
+  }
+
+  function togglePin(pin) {
+    setState(s => {
+      const sel = s.selectedPins;
+      const has = sel.includes(pin);
+      return { ...s, selectedPins: has ? sel.filter(p => p !== pin) : [...sel, pin] };
+    });
+  }
+
+  function confirmThrow() {
+    setState(s => {
+      const { teams, currentTeamIdx, selectedPins, throws, round } = s;
+      const activeRules = s.rules || { eliminationOn, overflowGrace };
+      const team = teams[currentTeamIdx];
+      const score = calcThrowScore(selectedPins);
+
+      let newScore = team.score + score;
+      let overflow = false;
+      let overflowStrikes = team.overflowStrikes || 0;
+      let penalized = false;
+
+      if (newScore > targetScore) {
+        overflow = true;
+        overflowStrikes += 1;
+        if (overflowStrikes > activeRules.overflowGrace) {
+          // Grace period exhausted → fall to 25
+          newScore = 25;
+          overflowStrikes = 0;
+          penalized = true;
+        } else {
+          // Still in grace period → keep score before overflow, just count strike
+          newScore = team.score; // score unchanged, counts as a penalty round
+        }
+      } else {
+        overflowStrikes = 0; // successful throw resets overflow strikes
+      }
+
+      const newThrow = {
+        teamIdx: currentTeamIdx, pins: [...selectedPins], points: score,
+        scoreBefore: team.score, missesBefore: team.misses,
+        overflow, penalized, overflowStrikesAfter: overflowStrikes
+      };
+
+      const updatedTeam = {
+        ...team,
+        score: newScore,
+        misses: overflow ? team.misses : 0, // overflow doesn't reset miss counter
+        overflowStrikes,
+        totalThrows: team.totalThrows + 1,
+        totalScore: team.totalScore + score,
+        maxThrow: Math.max(team.maxThrow || 0, score),
+        overflows: (team.overflows || 0) + (overflow ? 1 : 0),
+        history: [...team.history, { pins: [...selectedPins], points: score, overflow, penalized }]
+      };
+
+      const newTeams = teams.map((t, i) => i === currentTeamIdx ? updatedTeam : t);
+
+      if (newScore === targetScore && !overflow) {
+        setTimeout(() => {
+          const duration = Date.now() - (s.startedAt || Date.now());
+          clearCurrentGame();
+          setWinner({ team: updatedTeam, teams: newTeams, duration });
+        }, 300);
+      } else {
+        if (penalized) {
+          setTimeout(() => showEventPopup('overflow_penalized', team.name, team.color, {
+            scoreBefore: team.score + score, newScore: 25, targetScore
+          }), 50);
+        } else if (overflow) {
+          const remaining = activeRules.overflowGrace - overflowStrikes;
+          setTimeout(() => showEventPopup('overflow_grace', team.name, team.color, {
+            score, scoreBefore: team.score, targetScore,
+            strikesUsed: overflowStrikes, graceTotal: activeRules.overflowGrace, remaining
+          }), 50);
+        } else {
+          showToast(`+${score} → ${newScore} pts`);
+        }
+      }
+
+      const nextIdx = getNextActive(newTeams, currentTeamIdx);
+      const newRound = nextIdx <= currentTeamIdx ? round + 1 : round;
+      return { ...s, teams: newTeams, currentTeamIdx: nextIdx, selectedPins: [], throws: [...throws, newThrow], round: newRound };
+    });
+  }
+
+  function confirmMiss() {
+    setState(s => {
+      const { teams, currentTeamIdx, throws, round } = s;
+      const activeRules = s.rules || { eliminationOn, overflowGrace };
+      const team = teams[currentTeamIdx];
+      const newMisses = team.misses + 1;
+      const eliminated = activeRules.eliminationOn && newMisses >= 3;
+
+      const newThrow = {
+        teamIdx: currentTeamIdx, pins: [], points: 0,
+        scoreBefore: team.score, missesBefore: team.misses, miss: true, eliminated
+      };
+
+      const updatedTeam = {
+        ...team,
+        misses: eliminated ? team.misses : newMisses,
+        eliminated,
+        totalThrows: team.totalThrows + 1,
+        history: [...team.history, { pins: [], points: 0, miss: true }]
+      };
+
+      const newTeams = teams.map((t, i) => i === currentTeamIdx ? updatedTeam : t);
+
+      if (eliminated) {
+        setTimeout(() => showEventPopup('eliminated', team.name, team.color, {
+          misses: newMisses
+        }), 50);
+        const active = newTeams.filter(t => !t.eliminated);
+        if (active.length === 1) {
+          setTimeout(() => {
+            const duration = Date.now() - (s.startedAt || Date.now());
+            clearCurrentGame();
+            setWinner({ team: active[0], teams: newTeams, duration });
+          }, 2200);
+        }
+      } else {
+        if (activeRules.eliminationOn) {
+          showToast(`❌ Raté ! (${newMisses}/3)`);
+        } else {
+          showToast('❌ Raté !');
+        }
+      }
+
+      const nextIdx = getNextActive(newTeams, currentTeamIdx);
+      const newRound = nextIdx <= currentTeamIdx ? round + 1 : round;
+      return { ...s, teams: newTeams, currentTeamIdx: nextIdx, selectedPins: [], throws: [...throws, newThrow], round: newRound };
+    });
+  }
+
+  function undoLast() {
+    setState(s => {
+      const { throws, teams } = s;
+      if (throws.length === 0) return s;
+      const last = throws[throws.length - 1];
+      const team = teams[last.teamIdx];
+
+      const restoredTeam = {
+        ...team,
+        score: last.scoreBefore,
+        misses: last.missesBefore,
+        eliminated: false,
+        totalThrows: Math.max(0, team.totalThrows - 1),
+        history: team.history.slice(0, -1)
+      };
+
+      const newTeams = teams.map((t, i) => i === last.teamIdx ? restoredTeam : t);
+      showToast('↩️ Lancer annulé');
+      return { ...s, teams: newTeams, currentTeamIdx: last.teamIdx, selectedPins: [], throws: throws.slice(0, -1) };
+    });
+  }
+
+  function getNextActive(teams, currentIdx) {
+    for (let i = 1; i <= teams.length; i++) {
+      const idx = (currentIdx + i) % teams.length;
+      if (!teams[idx].eliminated) return idx;
+    }
+    return currentIdx;
+  }
+
+  const { teams, currentTeamIdx, selectedPins, throws, round } = state;
+  const currentTeam = teams[currentTeamIdx];
+  const throwScore = calcThrowScore(selectedPins);
+
+  const recentHistory = throws.slice(-8).reverse().map((t, i) => ({
+    key: i,
+    label: t.miss ? '✗' : t.points === 0 ? '0' : `+${t.points}`,
+    type: t.miss ? 'miss' : t.points > 8 ? 'bonus' : 'normal',
+    team: teams[t.teamIdx]
+  }));
+
+  if (winner) {
+    return React.createElement(WinScreen, {
+      winner, targetScore, onNewGame: onEnd,
+      onRematch: () => { clearCurrentGame(); setWinner(null); setState(initState()); }
+    });
+  }
+
+  return React.createElement('div', { className: 'screen game-layout' },
+    // Contextual event popup
+    eventPopup && React.createElement(EventPopup, {
+      popup: eventPopup,
+      onClose: () => setEventPopup(null)
+    }),
+    React.createElement('div', { className: 'scoreboard' },
+      ...teams.map((team, i) =>
+        React.createElement('div', {
+          key: i,
+          className: `team-score-card ${i === currentTeamIdx ? 'active' : ''} ${team.eliminated ? 'eliminated' : ''}`
+        },
+          i === currentTeamIdx && React.createElement('div', { className: 'active-arrow' }, '▼'),
+          team.eliminated && React.createElement('div', { className: 'elim-badge' }, '❌'),
+          React.createElement('div', { className: 'team-name-label', style: { color: team.color } }, team.name),
+          React.createElement('div', { className: 'team-score-value' }, team.score),
+          React.createElement('div', { className: 'team-score-remain' }, `reste ${targetScore - team.score}`),
+          // overflow grace warning
+          (team.overflowStrikes > 0) && React.createElement('div', { style:{fontSize:'11px', color:'#f39c12', fontWeight:'800', marginTop:'2px'} },
+            `⚠️ ${'💥'.repeat(team.overflowStrikes)}`
+          ),
+          !team.eliminated && (state.rules||{eliminationOn:true}).eliminationOn && React.createElement('div', { className: 'miss-indicator' },
+            [0,1,2].map(j => React.createElement('div', { key: j, className: `miss-dot ${j < team.misses ? 'filled' : ''}` }))
+          )
+        )
+      )
+    ),
+
+    React.createElement('div', { className: 'game-main', style: { flex:1, display:'flex', flexDirection:'column', overflow:'hidden' } },
+      React.createElement('div', { className: 'current-turn' },
+        React.createElement('div', { className: 'turn-label' },
+          'Tour de ', React.createElement('span', { style: { color: currentTeam.color } }, currentTeam.name),
+          `  •  Round ${round}`
+        )
+      ),
+
+      React.createElement('div', { className: 'pins-grid-container' },
+        React.createElement('div', { className: 'pins-grid' },
+          ...ACTUAL_PINS.map(pin =>
+            React.createElement('button', {
+              key: pin,
+              className: `pin-btn ${selectedPins.includes(pin) ? 'selected' : ''}`,
+              onClick: () => togglePin(pin)
+            },
+              React.createElement('span', { className: 'check-mark' }, '✓'),
+              pin
+            )
+          )
+        )
+      ),
+
+      React.createElement('div', { className: 'action-row' },
+        React.createElement('div', { className: 'throw-score-preview' },
+          React.createElement('span', { className: 'label' }, 'Score'),
+          React.createElement('span', { className: 'value' }, selectedPins.length === 0 ? '—' : throwScore)
+        ),
+        React.createElement('button', { className: 'miss-btn', onClick: confirmMiss }, '✗ Raté'),
+        React.createElement('button', {
+          className: 'confirm-btn',
+          disabled: selectedPins.length === 0,
+          onClick: confirmThrow
+        }, '✓ Valider')
+      ),
+
+      recentHistory.length > 0 && React.createElement('div', { className: 'history-strip' },
+        React.createElement('span', { className: 'history-label' }, 'Récent :'),
+        ...recentHistory.map(h =>
+          React.createElement('div', {
+            key: h.key,
+            className: `history-chip ${h.type}`,
+            style: { borderLeft: `3px solid ${h.team.color}` }
+          }, h.label)
+        )
+      ),
+
+      React.createElement('div', { className: 'undo-row' },
+        React.createElement('button', {
+          className: 'undo-btn', onClick: undoLast, disabled: throws.length === 0
+        }, '↩ Annuler dernier lancer')
+      )
+    ),
+
+    React.createElement('div', { className: `toast ${toast.show ? 'show' : ''}` }, toast.msg)
+  );
+}
+
+// ============================================================
+// WIN SCREEN
+// ============================================================
+function WinScreen({ winner, targetScore, onNewGame, onRematch }) {
+  const { team, teams, duration } = winner;
+  const totalThrows = team.totalThrows;
+  const scoring = team.history.filter(h => !h.miss);
+  const misses = team.history.filter(h => h.miss).length;
+  const avgScore = scoring.length > 0 ? (team.totalScore / scoring.length).toFixed(1) : 0;
+  const bestThrow = team.maxThrow || 0;
+
+  useEffect(() => {
+    addGameToHistory({
+      id: Date.now(),
+      date: Date.now(),
+      duration,
+      targetScore,
+      winner: team.name,
+      winnerColor: team.color,
+      teams: teams.map(t => ({
+        name: t.name,
+        color: t.color,
+        score: t.score,
+        totalThrows: t.totalThrows,
+        totalScore: t.totalScore,
+        maxThrow: t.maxThrow || 0,
+        overflows: t.overflows || 0,
+        misses: t.history ? t.history.filter(h => h.miss).length : 0
+      }))
+    });
+  }, []);
+
+  return React.createElement('div', { className: 'screen' },
+    React.createElement('div', { className: 'win-screen' },
+      React.createElement('div', { className: 'win-emoji' }, '🏆'),
+      React.createElement('div', { className: 'win-title' }, 'Victoire !'),
+      React.createElement('div', { className: 'win-team', style: { color: team.color } }, team.name),
+      React.createElement('div', { className: 'win-stats' },
+        React.createElement('div', { className: 'win-stat-row' },
+          React.createElement('span', null, '🎯 Score final'),
+          React.createElement('strong', null, `${team.score} pts`)
+        ),
+        React.createElement('div', { className: 'win-stat-row' },
+          React.createElement('span', null, '🎳 Lancers totaux'),
+          React.createElement('strong', null, totalThrows)
+        ),
+        React.createElement('div', { className: 'win-stat-row' },
+          React.createElement('span', null, '📊 Moy. par lancer'),
+          React.createElement('strong', null, `${avgScore} pts`)
+        ),
+        React.createElement('div', { className: 'win-stat-row' },
+          React.createElement('span', null, '🏅 Meilleur lancer'),
+          React.createElement('strong', null, `${bestThrow} pts`)
+        ),
+        React.createElement('div', { className: 'win-stat-row' },
+          React.createElement('span', null, '❌ Ratés'),
+          React.createElement('strong', null, misses)
+        ),
+        duration && React.createElement('div', { className: 'win-stat-row' },
+          React.createElement('span', null, '⏱ Durée'),
+          React.createElement('strong', null, formatDuration(duration))
+        )
+      ),
+      React.createElement('div', { style: { display:'flex', gap:'12px', width:'100%', maxWidth:'320px' } },
+        React.createElement('button', { className: 'btn btn-ghost btn-full', onClick: onRematch }, '🔄 Revanche'),
+        React.createElement('button', { className: 'btn btn-wood btn-full', onClick: onNewGame }, '🏠 Accueil')
+      )
+    )
+  );
+}
+
+// ============================================================
+// HISTORY SCREEN
+// ============================================================
+function HistoryScreen({ onBack }) {
+  const [history, setHistory] = useState(loadHistory);
+  const [selected, setSelected] = useState(null); // game detail view
+  const [tab, setTab] = useState('parties'); // parties | stats
+
+  function clearAll() {
+    if (window.confirm('Effacer tout l\'historique ?')) {
+      saveHistory([]);
+      setHistory([]);
+      setSelected(null);
+    }
+  }
+
+  // ---- Global stats ----
+  const globalStats = React.useMemo ? React.useMemo(() => {
+    if (history.length === 0) return null;
+    const allTeamRecords = history.flatMap(g => g.teams || []);
+    const wins = {};
+    history.forEach(g => { wins[g.winner] = (wins[g.winner] || 0) + 1; });
+    const topWinner = Object.entries(wins).sort((a,b) => b[1]-a[1])[0];
+    const avgDuration = history.filter(g=>g.duration).reduce((a,g) => a + g.duration, 0) / (history.filter(g=>g.duration).length || 1);
+    const avgRounds = history.filter(g=>g.rounds).reduce((a,g) => a + g.rounds, 0) / (history.filter(g=>g.rounds).length || 1);
+    // per-player aggregated stats
+    const playerStats = {};
+    history.forEach(g => {
+      (g.teams||[]).forEach(t => {
+        if (!playerStats[t.name]) playerStats[t.name] = { name:t.name, color:t.color, games:0, wins:0, totalThrows:0, totalScore:0, maxThrow:0, overflows:0, misses:0 };
+        const p = playerStats[t.name];
+        p.games++;
+        if (t.name === g.winner) p.wins++;
+        p.totalThrows += t.totalThrows || 0;
+        p.totalScore += t.totalScore || 0;
+        p.maxThrow = Math.max(p.maxThrow, t.maxThrow || 0);
+        p.overflows += t.overflows || 0;
+        p.misses += t.misses || 0;
+      });
+    });
+    return { topWinner, avgDuration, wins, playerStats: Object.values(playerStats), total: history.length };
+  }, [history]) : null;
+
+  if (selected) {
+    return React.createElement(GameDetailScreen, { game: selected, onBack: () => setSelected(null) });
+  }
+
+  return React.createElement('div', { className: 'screen' },
+    React.createElement('div', { className: 'app-header' },
+      React.createElement('button', { className: 'header-btn', onClick: onBack }, '← Retour'),
+      React.createElement('div', { className: 'app-title' }, tab === 'parties' ? 'Historique' : 'Statistiques'),
+      history.length > 0 && tab === 'parties' && React.createElement('button', { className: 'header-btn', onClick: clearAll, style: { color: '#e74c3c' } }, '🗑')
+    ),
+
+    // Tab bar
+    React.createElement('div', { style: { display:'flex', background:'rgba(0,0,0,0.2)', padding:'8px 16px', gap:'8px', flexShrink:0 } },
+      ['parties','stats'].map(t =>
+        React.createElement('button', {
+          key: t,
+          onClick: () => setTab(t),
+          style: {
+            flex: 1, border:'none', borderRadius:'10px', padding:'9px',
+            fontFamily:"'Nunito',sans-serif", fontWeight:'800', fontSize:'14px', cursor:'pointer',
+            background: tab===t ? 'white' : 'transparent',
+            color: tab===t ? '#2d5016' : 'rgba(255,255,255,0.6)',
+            transition:'all 0.2s'
+          }
+        }, t === 'parties' ? '🎳 Parties' : '📊 Stats')
+      )
+    ),
+
+    React.createElement('div', { className: 'scroll-content' },
+      history.length === 0
+        ? React.createElement('div', { style: { textAlign:'center', color:'rgba(255,255,255,0.5)', marginTop:'60px' } },
+            React.createElement('div', { style: { fontSize:'48px', marginBottom:'12px' } }, '📭'),
+            React.createElement('div', { style:{fontSize:'16px'} }, 'Aucune partie enregistrée')
+          )
+        : tab === 'parties'
+          ? history.map(game =>
+              React.createElement('div', {
+                key: game.id,
+                className: 'history-item',
+                onClick: () => setSelected(game),
+                style: { cursor: 'pointer' }
+              },
+                React.createElement('div', { className: 'history-item-header' },
+                  React.createElement('div', { className: 'history-item-title' }, `🏆 ${game.winner}`),
+                  React.createElement('div', { style: { textAlign:'right' } },
+                    React.createElement('div', { className: 'history-item-date' }, formatDate(game.date)),
+                    game.duration && React.createElement('div', { style: { fontSize:'10px', color:'#a07050', marginTop:'1px' } }, `⏱ ${formatDuration(game.duration)}`)
+                  )
+                ),
+                React.createElement('div', { className: 'history-item-teams' },
+                  ...(game.teams||[]).map((t, i) =>
+                    React.createElement('span', {
+                      key: i,
+                      className: `history-team-pill`,
+                      style: {
+                        background: t.name === game.winner ? t.color : t.color+'22',
+                        color: t.name === game.winner ? 'white' : t.color,
+                        border: `2px solid ${t.color}`
+                      }
+                    }, `${t.name === game.winner ? '👑 ' : ''}${t.name} : ${t.score}`)
+                  )
+                ),
+                React.createElement('div', { style:{ fontSize:'11px', color:'#a07050', marginTop:'6px', textAlign:'right' } }, '👉 Voir détails')
+              )
+            )
+          : globalStats
+            ? React.createElement('div', null,
+                // Summary cards
+                React.createElement('div', { style:{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', marginBottom:'14px' } },
+                  [
+                    { icon:'🎳', label:'Parties jouées', value: globalStats.total },
+                    { icon:'🏆', label:'Champion', value: globalStats.topWinner ? `${globalStats.topWinner[0]} (${globalStats.topWinner[1]}v)` : '—' },
+                    { icon:'⏱', label:'Durée moy.', value: formatDuration(globalStats.avgDuration) },
+                    { icon:'🎯', label:'Score cible', value: `${history[0]?.targetScore || 50} pts` }
+                  ].map((s,i) =>
+                    React.createElement('div', { key:i, className:'card', style:{marginBottom:0, textAlign:'center', padding:'12px'} },
+                      React.createElement('div', { style:{fontSize:'22px', marginBottom:'4px'} }, s.icon),
+                      React.createElement('div', { style:{fontFamily:"'Fredoka One',cursive", fontSize:'16px', color:'#2d5016'} }, s.value),
+                      React.createElement('div', { style:{fontSize:'11px', color:'#7a6a5a', marginTop:'2px'} }, s.label)
+                    )
+                  )
+                ),
+                // Per-player stats table
+                React.createElement('div', { className:'card' },
+                  React.createElement('div', { className:'card-title' }, '👥 Stats par joueur'),
+                  ...globalStats.playerStats.map(p =>
+                    React.createElement('div', { key:p.name, style:{ borderBottom:'1px solid #e8d5a3', paddingBottom:'12px', marginBottom:'12px' } },
+                      React.createElement('div', { style:{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'8px' } },
+                        React.createElement('div', { style:{ width:12, height:12, borderRadius:'50%', background:p.color, flexShrink:0 } }),
+                        React.createElement('div', { style:{ fontFamily:"'Fredoka One',cursive", fontSize:'16px', color:'#2d5016' } }, p.name),
+                        React.createElement('div', { style:{ marginLeft:'auto', background: p.color+'22', color:p.color, borderRadius:'20px', padding:'2px 10px', fontSize:'12px', fontWeight:'800' } },
+                          `${p.wins}/${p.games} victoires`
+                        )
+                      ),
+                      React.createElement('div', { style:{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'6px' } },
+                        [
+                          { label:'Lancers', value: p.totalThrows },
+                          { label:'Moy/lancer', value: p.totalThrows > 0 ? (p.totalScore/p.totalThrows).toFixed(1) : '—' },
+                          { label:'Best lancer', value: p.maxThrow || '—' },
+                          { label:'Ratés', value: p.misses },
+                          { label:'Débordements', value: p.overflows },
+                          { label:'% victoires', value: `${Math.round(p.wins/p.games*100)}%` }
+                        ].map((s,i) =>
+                          React.createElement('div', { key:i, style:{ background:'#f5efe0', borderRadius:'8px', padding:'6px 8px', textAlign:'center' } },
+                            React.createElement('div', { style:{ fontWeight:'800', fontSize:'15px', color:'#2d5016' } }, s.value),
+                            React.createElement('div', { style:{ fontSize:'10px', color:'#7a6a5a', marginTop:'1px' } }, s.label)
+                          )
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            : null
+    )
+  );
+}
+
+// ============================================================
+// GAME DETAIL SCREEN
+// ============================================================
+function GameDetailScreen({ game, onBack }) {
+  return React.createElement('div', { className: 'screen' },
+    React.createElement('div', { className: 'app-header' },
+      React.createElement('button', { className: 'header-btn', onClick: onBack }, '← Retour'),
+      React.createElement('div', { className: 'app-title' }, 'Détail'),
+      React.createElement('div', { style:{width:'70px'} })
+    ),
+    React.createElement('div', { className: 'scroll-content' },
+      React.createElement('div', { style:{ textAlign:'center', padding:'10px 0 16px' } },
+        React.createElement('div', { style:{ fontSize:'36px' } }, '🏆'),
+        React.createElement('div', { style:{ fontFamily:"'Fredoka One',cursive", fontSize:'22px', color:'#c8854a', marginTop:'4px' } }, game.winner),
+        React.createElement('div', { style:{ fontSize:'13px', color:'rgba(255,255,255,0.6)', marginTop:'2px' } },
+          formatDate(game.date) + (game.duration ? ` • ${formatDuration(game.duration)}` : '')
+        )
+      ),
+      ...(game.teams||[]).map((t, i) =>
+        React.createElement('div', { key:i, className:'card', style:{ borderLeft:`4px solid ${t.color}` } },
+          React.createElement('div', { style:{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'10px' } },
+            React.createElement('div', { style:{ fontFamily:"'Fredoka One',cursive", fontSize:'18px', color: t.color } },
+              (t.name === game.winner ? '👑 ' : '') + t.name
+            ),
+            React.createElement('div', { style:{ fontFamily:"'Fredoka One',cursive", fontSize:'24px', color:'#2d5016' } }, `${t.score} pts`)
+          ),
+          React.createElement('div', { style:{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'6px' } },
+            [
+              { label:'Lancers', value: t.totalThrows || '—' },
+              { label:'Moy/lancer', value: t.totalThrows > 0 ? (t.totalScore/t.totalThrows).toFixed(1) : '—' },
+              { label:'Best', value: t.maxThrow || '—' },
+              { label:'Ratés', value: t.misses !== undefined ? t.misses : '—' },
+              { label:'Débord.', value: t.overflows !== undefined ? t.overflows : '—' },
+              { label:'Résultat', value: t.name === game.winner ? '🥇' : '—' }
+            ].map((s,j) =>
+              React.createElement('div', { key:j, style:{ background:'#f5efe0', borderRadius:'8px', padding:'6px 8px', textAlign:'center' } },
+                React.createElement('div', { style:{ fontWeight:'800', fontSize:'15px', color:'#2d5016' } }, s.value),
+                React.createElement('div', { style:{ fontSize:'10px', color:'#7a6a5a', marginTop:'1px' } }, s.label)
+              )
+            )
+          )
+        )
+      )
+    )
+  );
+}
+
+// ============================================================
+// ROOT APP — with saved-game resume
+// ============================================================
+function App() {
+  const [screen, setScreen] = useState('home');
+  const [gameConfig, setGameConfig] = useState(null);
+  const [resumeState, setResumeState] = useState(null);
+  const [histCount, setHistCount] = useState(() => loadHistory().length);
+  const [savedGame, setSavedGame] = useState(() => loadCurrentGame());
+
+  function startGame(teams, targetScore, rules) {
+    clearCurrentGame();
+    setResumeState(null);
+    setGameConfig({ teams, targetScore, rules });
+    setScreen('game');
+  }
+
+  function resumeGame() {
+    const saved = loadCurrentGame();
+    if (!saved) return;
+    setResumeState(saved);
+    setGameConfig({ teams: saved.teams, targetScore: saved.targetScore, rules: saved.rules });
+    setScreen('game');
+  }
+
+  function endGame() {
+    setHistCount(loadHistory().length);
+    setSavedGame(null);
+    setResumeState(null);
+    setScreen('home');
+  }
+
+  function goHistory() {
+    setHistCount(loadHistory().length);
+    setScreen('history');
+  }
+
+  useEffect(() => {
+    if (screen === 'home') setSavedGame(loadCurrentGame());
+  }, [screen]);
+
+  if (screen === 'home') return React.createElement(HomeScreen, {
+    onSetup: () => setScreen('setup'),
+    onHistory: goHistory,
+    onResume: resumeGame,
+    historyCount: histCount,
+    savedGame
+  });
+  if (screen === 'setup') return React.createElement(SetupScreen, { onBack: () => setScreen('home'), onStart: startGame });
+  if (screen === 'game' && gameConfig) return React.createElement(GameScreen, { ...gameConfig, onEnd: endGame, resumeState });
+  if (screen === 'history') return React.createElement(HistoryScreen, { onBack: () => setScreen('home') });
+  return null;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+</script>
+</body>
+</html>
