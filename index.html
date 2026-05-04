@@ -416,11 +416,11 @@
     .pin-btn {
       aspect-ratio: 1;
       border: none;
-      border-radius: 14px;
+      border-radius: 50%;
       background: linear-gradient(160deg, #e8c98a, #c8954a);
       color: #5a2d00;
       font-family: 'Fredoka One', cursive;
-      font-size: clamp(16px, 5vw, 24px);
+      font-size: clamp(15px, 4.5vw, 22px);
       cursor: pointer;
       box-shadow: 0 4px 0 #8a5a22, 0 6px 14px rgba(0,0,0,0.4);
       transition: all 0.1s;
@@ -433,9 +433,9 @@
       background: linear-gradient(160deg, #6bc46a, #2d7a2d);
       color: #fff;
       box-shadow: 0 4px 0 #1a4d1a, 0 6px 14px rgba(45,122,45,0.5);
-      transform: scale(1.06);
+      transform: scale(1.08);
     }
-    .pin-btn.selected:active { transform: scale(1.06) translateY(2px); box-shadow: 0 1px 0 #1a4d1a; }
+    .pin-btn.selected:active { transform: scale(1.08) translateY(2px); box-shadow: 0 1px 0 #1a4d1a; }
     .pin-btn .check-mark {
       position: absolute; top: 2px; right: 4px;
       font-size: 8px; opacity: 0; transition: opacity 0.15s;
@@ -722,21 +722,21 @@ function loadHistory() { try { return JSON.parse(localStorage.getItem(KEY_HISTOR
 function saveHistory(h) { try { localStorage.setItem(KEY_HISTORY,JSON.stringify(h)); } catch{} }
 function addGameToHistory(e) { const h=loadHistory(); h.unshift(e); saveHistory(h.slice(0,50)); }
 
-// ── SVG Field Diagram ──────────────────────────────────────
+// ── SVG Field Diagram — circles only, no trunk ────────────
 function FieldDiagram() {
-  const SLOT=48, R=18, TRUNK_H=16, ROW_H=56;
+  const SLOT=42, R=17, ROW_H=42;
   const rows=[
-    {pins:[7,9,8], startX:SLOT*0.5},
-    {pins:[5,11,12,6], startX:0},
-    {pins:[3,10,4], startX:SLOT*0.5},
-    {pins:[1,2], startX:SLOT*1.0},
+    {pins:[7,9,8],      startX:SLOT*0.5},
+    {pins:[5,11,12,6],  startX:0},
+    {pins:[3,10,4],     startX:SLOT*0.5},
+    {pins:[1,2],         startX:SLOT*1.0},
   ];
-  const totalW=4*SLOT, totalH=rows.length*ROW_H+R+TRUNK_H;
+  const totalW=4*SLOT, totalH=rows.length*ROW_H+R*2;
   return (
     <div className="field-diagram">
       <div className="field-title">Disposition des quilles</div>
-      <div style={{display:'flex',justifyContent:'center',padding:'8px 0',position:'relative',zIndex:1}}>
-        <svg viewBox={`0 0 ${totalW} ${totalH}`} style={{width:'100%',maxWidth:'260px',height:'auto',overflow:'visible'}}>
+      <div style={{display:'flex',justifyContent:'center',padding:'6px 0 2px',position:'relative',zIndex:1}}>
+        <svg viewBox={`0 0 ${totalW} ${totalH}`} style={{width:'100%',maxWidth:'210px',height:'auto',overflow:'visible'}}>
           <defs>
             <radialGradient id="pinG" cx="38%" cy="32%" r="60%">
               <stop offset="0%" stopColor="#e8c98a"/>
@@ -744,15 +744,14 @@ function FieldDiagram() {
             </radialGradient>
           </defs>
           {rows.flatMap((row,ri)=>row.pins.map((num,ci)=>{
-            const cx=row.startX+ci*SLOT+SLOT/2, cy=ri*ROW_H+R+4;
+            const cx=row.startX+ci*SLOT+SLOT/2;
+            const cy=ri*ROW_H+R+2;
             return (
               <g key={num}>
-                <rect x={cx-3.5} y={cy+R-2} width={7} height={TRUNK_H+2} rx={2} fill="rgba(0,0,0,0.3)"/>
-                <rect x={cx-3} y={cy+R-2} width={6} height={TRUNK_H} rx={2} fill="#7a4a1e"/>
-                <circle cx={cx+1} cy={cy+1.5} r={R} fill="rgba(0,0,0,0.3)"/>
+                <circle cx={cx+1} cy={cy+1.5} r={R} fill="rgba(0,0,0,0.25)"/>
                 <circle cx={cx} cy={cy} r={R} fill="url(#pinG)" stroke="#8a5a22" strokeWidth={1.5}/>
-                <ellipse cx={cx-R*0.3} cy={cy-R*0.3} rx={R*0.28} ry={R*0.18} fill="rgba(255,255,255,0.3)" transform={`rotate(-35,${cx},${cy})`}/>
-                <text x={cx} y={cy+6} textAnchor="middle" fontFamily="'Fredoka One',cursive" fontSize={num>=10?13:15} fill="#3a1e08" fontWeight="bold">{num}</text>
+                <ellipse cx={cx-R*0.3} cy={cy-R*0.3} rx={R*0.28} ry={R*0.18} fill="rgba(255,255,255,0.32)" transform={`rotate(-35,${cx},${cy})`}/>
+                <text x={cx} y={cy+6} textAnchor="middle" fontFamily="'Fredoka One',cursive" fontSize={num>=10?12:14} fill="#3a1e08" fontWeight="bold">{num}</text>
               </g>
             );
           }))}
@@ -1095,6 +1094,9 @@ function GameScreen({teams:initialTeams,targetScore,rules,onEnd,resumeState}) {
 
   if(winner) return <WinScreen winner={winner} targetScore={targetScore} onNewGame={onEnd} onRematch={()=>{clearCurrentGame();setWinner(null);setState(initState());}}/>;
 
+  // Pins sorted 1→12
+  const SORTED_PINS = [1,2,3,4,5,6,7,8,9,10,11,12];
+
   return (
     <div className="screen game-layout">
       {eventPopup && <EventPopup popup={eventPopup} onClose={()=>setEventPopup(null)}/>}
@@ -1103,40 +1105,57 @@ function GameScreen({teams:initialTeams,targetScore,rules,onEnd,resumeState}) {
         onNewGame={()=>{clearCurrentGame();onEnd();}}
       />}
 
-      {/* Scoreboard + abandon */}
-      <div style={{display:'flex',alignItems:'stretch',flexShrink:0}}>
-        <div className="scoreboard" style={{flex:1,minWidth:0}}>
-          {state.teams.map((team,i)=>(
-            <div key={i} className={`team-score-card ${i===currentTeamIdx?'active':''} ${team.eliminated?'eliminated':''}`}>
-              {i===currentTeamIdx && <div className="active-arrow">▼</div>}
-              {team.eliminated && <div className="elim-badge">❌</div>}
-              <div className="team-name-label" style={{color:team.color}}>{team.name}</div>
-              <div className="team-score-value">{team.score}</div>
-              <div className="team-score-remain">reste {targetScore-team.score}</div>
-              {team.overflowStrikes>0 && <div style={{fontSize:'10px',color:'#f39c12',fontWeight:'800'}}>⚠️ {'💥'.repeat(team.overflowStrikes)}</div>}
-              {!team.eliminated && (state.rules||{eliminationOn:true}).eliminationOn && (
-                <div className="miss-indicator">
-                  {[0,1,2].map(j=><div key={j} className={`miss-dot ${j<team.misses?'filled':''}`}/>)}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-        <button onClick={()=>setAbandonOpen(true)} style={{background:'rgba(231,76,60,0.1)',border:'none',borderLeft:'1px solid rgba(255,255,255,0.06)',padding:'0 14px',cursor:'pointer',flexShrink:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'3px',color:'rgba(231,76,60,0.65)',WebkitTapHighlightColor:'transparent'}}>
-          <span style={{fontSize:'18px'}}>🏳</span>
-          <span style={{fontSize:'8px',fontWeight:'900',letterSpacing:'0.5px',textTransform:'uppercase'}}>Stop</span>
-        </button>
+      {/* ── Scoreboard (full width, no abandon button here) ── */}
+      <div className="scoreboard" style={{flexShrink:0}}>
+        {state.teams.map((team,i)=>(
+          <div key={i} className={`team-score-card ${i===currentTeamIdx?'active':''} ${team.eliminated?'eliminated':''}`}>
+            {i===currentTeamIdx && <div className="active-arrow">▼</div>}
+            {team.eliminated && <div className="elim-badge">❌</div>}
+            <div className="team-name-label" style={{color:team.color}}>{team.name}</div>
+            <div className="team-score-value">{team.score}</div>
+            <div className="team-score-remain">reste {targetScore-team.score}</div>
+            {team.overflowStrikes>0 && <div style={{fontSize:'10px',color:'#f39c12',fontWeight:'800'}}>⚠️ {'💥'.repeat(team.overflowStrikes)}</div>}
+            {!team.eliminated && (state.rules||{eliminationOn:true}).eliminationOn && (
+              <div className="miss-indicator">
+                {[0,1,2].map(j=><div key={j} className={`miss-dot ${j<team.misses?'filled':''}`}/>)}
+              </div>
+            )}
+          </div>
+        ))}
       </div>
 
-      {/* Main game area */}
+      {/* ── Main game area ── */}
       <div className="game-main" style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',minHeight:0}}>
+
+        {/* Turn label */}
         <div className="current-turn">
           <div className="turn-label">Tour de <span style={{color:currentTeam.color}}>{currentTeam.name}</span>  •  Round {round}</div>
         </div>
 
+        {/* ── Score preview — ABOVE pins ── */}
+        <div style={{flexShrink:0,padding:'4px 12px 2px',display:'flex',justifyContent:'center'}}>
+          <div style={{background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.12)',borderRadius:'14px',display:'flex',alignItems:'center',gap:'14px',padding:'8px 28px',minWidth:'180px',justifyContent:'center'}}>
+            <div style={{textAlign:'center'}}>
+              <div style={{fontSize:'9px',fontWeight:'900',color:'rgba(255,255,255,0.3)',letterSpacing:'1.5px',textTransform:'uppercase'}}>Score du lancer</div>
+              <div style={{fontFamily:"'Fredoka One',cursive",fontSize:'32px',color:selectedPins.length>0?'#c8854a':'rgba(255,255,255,0.25)',lineHeight:1,marginTop:'2px'}}>
+                {selectedPins.length===0?'—':throwScore}
+              </div>
+            </div>
+            {selectedPins.length>0 && (
+              <div style={{textAlign:'center',borderLeft:'1px solid rgba(255,255,255,0.1)',paddingLeft:'14px'}}>
+                <div style={{fontSize:'9px',fontWeight:'900',color:'rgba(255,255,255,0.3)',letterSpacing:'1.5px',textTransform:'uppercase'}}>Après</div>
+                <div style={{fontFamily:"'Fredoka One',cursive",fontSize:'32px',color:'#fff',lineHeight:1,marginTop:'2px'}}>
+                  {Math.min(currentTeam.score+throwScore, targetScore+1)>targetScore?25:currentTeam.score+throwScore}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── Pins grid — round, sorted 1→12 ── */}
         <div className="pins-grid-container">
           <div className="pins-grid">
-            {ACTUAL_PINS.map(pin=>(
+            {SORTED_PINS.map(pin=>(
               <button key={pin} className={`pin-btn ${selectedPins.includes(pin)?'selected':''}`} onClick={()=>togglePin(pin)}>
                 <span className="check-mark">✓</span>
                 {pin}
@@ -1145,15 +1164,23 @@ function GameScreen({teams:initialTeams,targetScore,rules,onEnd,resumeState}) {
           </div>
         </div>
 
-        <div className="action-row">
-          <div className="throw-score-preview">
-            <span className="label">Score</span>
-            <span className="value">{selectedPins.length===0?'—':throwScore}</span>
-          </div>
-          <button className="miss-btn" onClick={confirmMiss}>✗ Raté</button>
-          <button className="confirm-btn" disabled={selectedPins.length===0} onClick={confirmThrow}>✓ Valider</button>
+        {/* ── Raté button — BELOW pins, full width ── */}
+        <div style={{flexShrink:0,padding:'2px 12px 2px'}}>
+          <button className="miss-btn" onClick={confirmMiss} style={{width:'100%',height:'46px',fontSize:'15px',borderRadius:'12px',justifyContent:'center',gap:'8px'}}>
+            ✗  Raté — aucune quille renversée
+          </button>
         </div>
 
+        {/* ── Bottom row: Undo · Valider · Abandonner ── */}
+        <div style={{flexShrink:0,padding:'4px 12px',display:'flex',gap:'8px',alignItems:'stretch'}}>
+          <button className="undo-btn" onClick={undoLast} disabled={throws.length===0} style={{flex:'0 0 auto',padding:'0 12px',height:'52px'}}>↩</button>
+          <button className="confirm-btn" disabled={selectedPins.length===0} onClick={confirmThrow} style={{flex:1,height:'52px',fontSize:'16px'}}>✓ Valider</button>
+          <button onClick={()=>setAbandonOpen(true)} style={{flex:'0 0 auto',height:'52px',padding:'0 14px',background:'rgba(231,76,60,0.15)',border:'1.5px solid rgba(231,76,60,0.35)',borderRadius:'14px',color:'#ff6b5b',fontFamily:"'Fredoka One',cursive",fontSize:'13px',cursor:'pointer',WebkitTapHighlightColor:'transparent',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'2px',lineHeight:1}}>
+            🏳<span style={{fontSize:'9px',fontWeight:'900',letterSpacing:'0.5px',textTransform:'uppercase',fontFamily:"'Nunito',sans-serif"}}>Abandonner</span>
+          </button>
+        </div>
+
+        {/* ── Recent history strip ── */}
         {recentHistory.length>0 && (
           <div className="history-strip">
             <span className="history-label">Récent :</span>
@@ -1161,9 +1188,7 @@ function GameScreen({teams:initialTeams,targetScore,rules,onEnd,resumeState}) {
           </div>
         )}
 
-        <div className="undo-row">
-          <button className="undo-btn" onClick={undoLast} disabled={throws.length===0}>↩ Annuler dernier lancer</button>
-        </div>
+        <div style={{flexShrink:0,height:'max(4px,env(safe-area-inset-bottom))'}}/>
       </div>
 
       <div className={`toast ${toast.show?'show':''}`}>{toast.msg}</div>
