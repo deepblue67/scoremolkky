@@ -486,15 +486,16 @@
     }
     .abandon-btn {
       width: 70px; flex-shrink: 0;
-      border: 1.5px solid rgba(231,76,60,0.28); border-radius: 14px;
-      background: rgba(231,76,60,0.07); color: rgba(231,76,60,0.6);
+      border: 1.5px solid rgba(255,255,255,0.12); border-radius: 14px;
+      background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.7);
       cursor: pointer;
       display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
       -webkit-tap-highlight-color: transparent; transition: all 0.12s;
     }
-    .abandon-btn:active { background: rgba(231,76,60,0.2); color: #ff6b5b; transform: scale(0.96); }
+    .abandon-btn:active { background: rgba(255,255,255,0.14); color: #fff; transform: scale(0.96); }
+    .abandon-btn:disabled { opacity: 0.25; cursor: not-allowed; }
     .abandon-btn-icon { font-size: 18px; }
-    .abandon-btn-label { font-size: 8px; font-weight: 900; letter-spacing: 0.8px; text-transform: uppercase; font-family: 'Nunito', sans-serif; }
+    .abandon-btn-label { font-size: 9px; font-weight: 900; letter-spacing: 0.8px; text-transform: uppercase; font-family: 'Nunito', sans-serif; }
 
     /* ── History strip ── */
     .history-strip {
@@ -1223,8 +1224,8 @@ function GameScreen({teams:initialTeams,targetScore,rules,onEnd,resumeState}) {
           </div>
         </div>
 
-        {/* Score preview */}
-        <div className="score-preview-bar">
+        {/* Score preview — pushed down */}
+        <div className="score-preview-bar" style={{paddingTop:'10px'}}>
           <div className="score-preview-inner">
             <div className="score-col">
               <span className="score-col-label">Mon score</span>
@@ -1264,9 +1265,13 @@ function GameScreen({teams:initialTeams,targetScore,rules,onEnd,resumeState}) {
           </button>
         </div>
 
-        {/* Bottom: undo · valider · abandonner */}
+        {/* Bottom: annuler · valider · abandonner */}
         <div className="bottom-action-row">
-          <button className="undo-circle-btn" onClick={undoLast} disabled={throws.length===0} title="Annuler">↩</button>
+          <button className="abandon-btn" onClick={undoLast} disabled={throws.length===0}
+            style={{opacity: throws.length===0 ? 0.25 : 1, borderColor:'rgba(255,255,255,0.15)', color:'rgba(255,255,255,0.55)', background:'rgba(255,255,255,0.06)'}}>
+            <span className="abandon-btn-icon">↩</span>
+            <span className="abandon-btn-label">Annuler</span>
+          </button>
           <button className="validate-btn" disabled={selectedPins.length===0} onClick={confirmThrow}>✓  Valider</button>
           <button className="abandon-btn" onClick={()=>setAbandonOpen(true)}>
             <span className="abandon-btn-icon">🏳</span>
