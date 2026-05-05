@@ -1584,7 +1584,7 @@ function HistoryScreen({onBack}) {
 }
 
 // ── Home Screen ────────────────────────────────────────────
-function HomeScreen({onSetup,onHistory,onResume,historyCount,savedGame}) {
+function HomeScreen({onSetup,onHistory,onResume,onClearSaved,historyCount,savedGame}) {
   const [rulesOpen,setRulesOpen] = useState(false);
   const rules=[
     {icon:'🎯',text:'1 quille renversée → son numéro en points'},
@@ -1622,8 +1622,11 @@ function HomeScreen({onSetup,onHistory,onResume,historyCount,savedGame}) {
               {(savedGame.teams||[]).map((t,i)=><span key={i} style={{background:t.color+'18',border:`1px solid ${t.color}66`,borderRadius:'6px',padding:'4px 10px',fontSize:'12px',fontWeight:'800',color:t.color}}>{t.name}  {t.score}</span>)}
             </div>
             <div style={{display:'flex',gap:'8px'}}>
-              <button className="btn btn-wood btn-full" onClick={onResume} style={{fontSize:'14px'}}>▶  Reprendre</button>
-              <button style={{background:'transparent',border:'1px solid rgba(255,255,255,0.15)',borderRadius:'8px',padding:'10px 14px',color:'rgba(255,255,255,0.4)',fontSize:'13px',cursor:'pointer',flexShrink:0}} onClick={clearCurrentGame}>🗑</button>
+              <button className="btn btn-wood btn-full" onClick={onResume} style={{fontSize:'14px'}}>▶  Reprendre la partie</button>
+              <button
+                title="Abandonner et effacer cette partie"
+                style={{background:'rgba(231,76,60,0.1)',border:'1px solid rgba(231,76,60,0.25)',borderRadius:'8px',padding:'10px 14px',color:'rgba(231,76,60,0.6)',fontSize:'13px',cursor:'pointer',flexShrink:0}}
+                onClick={()=>{ if(window.confirm('Voulez-vous vraiment effacer la partie en cours ?')){ clearCurrentGame(); onClearSaved(); } }}>🗑</button>
             </div>
           </div>
         )}
@@ -1672,7 +1675,7 @@ function App() {
 
   useEffect(()=>{ if(screen==='home') setSavedGame(loadCurrentGame()); },[screen]);
 
-  if(screen==='home') return <HomeScreen onSetup={()=>setScreen('setup')} onHistory={goHistory} onResume={resumeGame} historyCount={histCount} savedGame={savedGame}/>;
+  if(screen==='home') return <HomeScreen onSetup={()=>setScreen('setup')} onHistory={goHistory} onResume={resumeGame} onClearSaved={()=>setSavedGame(null)} historyCount={histCount} savedGame={savedGame}/>;
   if(screen==='setup') return <SetupScreen onBack={()=>setScreen('home')} onStart={startGame}/>;
   if(screen==='game'&&gameConfig) return <GameScreen {...gameConfig} onEnd={endGame} resumeState={resumeState}/>;
   if(screen==='history') return <HistoryScreen onBack={()=>setScreen('home')}/>;
