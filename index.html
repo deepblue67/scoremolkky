@@ -644,10 +644,31 @@
       .game-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
       .pins-grid { max-width: 320px; }
     }
+
+    /* ===== SETTINGS SCREEN ===== */
+    .settings-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 0;
+      border-bottom: 1px solid rgba(45,80,22,0.12);
+    }
+    .settings-row:last-child { border-bottom: none; }
+    .settings-row-label { font-weight: 800; color: var(--forest); font-size: 14px; }
+    .settings-row-sub   { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .version-badge {
+      background: rgba(45,80,22,0.12); border: 1px solid rgba(45,80,22,0.25);
+      border-radius: 20px; padding: 4px 12px;
+      font-size: 12px; font-weight: 800; color: var(--forest);
+      letter-spacing: 0.5px;
+    }
   </style>
 </head>
 <body>
 <div id="root"></div>
+
+<script>
+// App version – updated at each release
+window.APP_VERSION = 'V20260611_18H30';
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
@@ -655,6 +676,7 @@
 const { useState, useEffect, useRef, useMemo } = React;
 
 // ── Constants ──────────────────────────────────────────────
+const APP_VERSION = 'V20260611_18H30';
 const TEAM_COLORS = ['#E74C3C','#3498DB','#2ECC71','#F39C12','#9B59B6','#1ABC9C'];
 const ACTUAL_PINS = [7,9,8,10,11,12,6,5,4,3,2,1];
 
@@ -1588,8 +1610,123 @@ function HistoryScreen({onBack}) {
   );
 }
 
+
+// ── Settings Screen ────────────────────────────────────────
+function SettingsScreen({onBack}) {
+  const [storageSize, setStorageSize] = React.useState('…');
+  React.useEffect(()=>{
+    try {
+      let bytes=0;
+      for(let k in localStorage) { if(localStorage.hasOwnProperty(k)) bytes+=localStorage.getItem(k).length*2; }
+      setStorageSize(bytes > 1024 ? (bytes/1024).toFixed(1)+' Ko' : bytes+' o');
+    } catch(e){ setStorageSize('—'); }
+  },[]);
+
+  function clearAll() {
+    if(window.confirm('Effacer tout l\'historique de jeu ?')) {
+      try { localStorage.removeItem('molky_history_v2'); localStorage.removeItem('molky_current_game_v2'); } catch(e){}
+      window.location.reload();
+    }
+  }
+
+  function checkUpdate() {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistration('./sw.js').then(reg => {
+        if (reg) {
+          reg.update().then(() => alert('✅ Vérification effectuée.\nVersion actuelle : ' + APP_VERSION));
+        } else {
+          alert('⚠️ Service Worker non encore actif.\nAssure-toi que sw.js est dans le même dossier que index.html.');
+        }
+      });
+    } else {
+      alert('Service Workers non supportés sur ce navigateur.');
+    }
+  }
+
+  return (
+    <div className="screen">
+      <div className="app-header">
+        <button className="header-btn" onClick={onBack}>← Retour</button>
+        <div className="app-title">⚙️ Réglages</div>
+        <div style={{width:'70px'}}/>
+      </div>
+      <div className="scroll-content">
+
+        {/* ── Version ── */}
+        <div className="card">
+          <div className="card-title">📱 Application</div>
+          <div className="settings-row">
+            <div>
+              <div className="settings-row-label">Version</div>
+              <div className="settings-row-sub">Mölkky Score App</div>
+            </div>
+            <span className="version-badge">{APP_VERSION}</span>
+          </div>
+          <div className="settings-row">
+            <div>
+              <div className="settings-row-label">Mise à jour</div>
+              <div className="settings-row-sub">Vérifier une nouvelle version</div>
+            </div>
+            <button className="btn btn-ghost btn-sm" onClick={checkUpdate}>🔄 Vérifier</button>
+          </div>
+          <div className="settings-row">
+            <div>
+              <div className="settings-row-label">Mode hors-ligne</div>
+              <div className="settings-row-sub">{'serviceWorker' in navigator ? '✅ Supporté' : '❌ Non supporté'}</div>
+            </div>
+            <span style={{fontSize:'18px'}}>📱</span>
+          </div>
+        </div>
+
+        {/* ── Données ── */}
+        <div className="card">
+          <div className="card-title">💾 Données locales</div>
+          <div className="settings-row">
+            <div>
+              <div className="settings-row-label">Taille des données</div>
+              <div className="settings-row-sub">Historique + partie en cours</div>
+            </div>
+            <span style={{fontWeight:'800',color:'var(--muted)',fontSize:'13px'}}>{storageSize}</span>
+          </div>
+          <div className="settings-row">
+            <div>
+              <div className="settings-row-label" style={{color:'#e74c3c'}}>Effacer tout</div>
+              <div className="settings-row-sub">Historique et partie en cours</div>
+            </div>
+            <button className="btn btn-danger btn-sm" onClick={clearAll}>🗑 Effacer</button>
+          </div>
+        </div>
+
+        {/* ── À propos ── */}
+        <div className="card">
+          <div className="card-title">ℹ️ À propos</div>
+          <div className="settings-row">
+            <div>
+              <div className="settings-row-label">Jeu d'origine</div>
+              <div className="settings-row-sub">Mölkky · Tactic Games · Finlande 1996</div>
+            </div>
+          </div>
+          <div className="settings-row">
+            <div>
+              <div className="settings-row-label">Score cible officiel</div>
+              <div className="settings-row-sub">50 pts · Dépassement → retombe à 25</div>
+            </div>
+          </div>
+          <div className="settings-row">
+            <div>
+              <div className="settings-row-label">Élimination officielle</div>
+              <div className="settings-row-sub">3 ratés consécutifs</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
 // ── Home Screen ────────────────────────────────────────────
-function HomeScreen({onSetup,onHistory,onResume,onClearSaved,historyCount,savedGame}) {
+function HomeScreen({onSetup,onHistory,onSettings,onResume,onClearSaved,historyCount,savedGame}) {
   const [rulesOpen,setRulesOpen] = useState(false);
   const rules=[
     {icon:'🎯',text:'1 quille renversée → son numéro en points'},
@@ -1605,6 +1742,7 @@ function HomeScreen({onSetup,onHistory,onResume,onClearSaved,historyCount,savedG
         <div className="app-title">Möl<span>kky</span></div>
         <div style={{display:'flex',gap:'8px'}}>
           {historyCount>0 && <button className="header-btn" onClick={onHistory}>📊 {historyCount}</button>}
+          <button className="header-btn" onClick={onSettings} title="Réglages" style={{padding:'8px 10px',fontSize:'16px'}}>⚙️</button>
         </div>
       </div>
       <div className="scroll-content">
@@ -1680,15 +1818,37 @@ function App() {
 
   useEffect(()=>{ if(screen==='home') setSavedGame(loadCurrentGame()); },[screen]);
 
-  if(screen==='home') return <HomeScreen onSetup={()=>setScreen('setup')} onHistory={goHistory} onResume={resumeGame} onClearSaved={()=>setSavedGame(null)} historyCount={histCount} savedGame={savedGame}/>;
+  if(screen==='home') return <HomeScreen onSetup={()=>setScreen('setup')} onHistory={goHistory} onSettings={()=>setScreen('settings')} onResume={resumeGame} onClearSaved={()=>setSavedGame(null)} historyCount={histCount} savedGame={savedGame}/>;
   if(screen==='setup') return <SetupScreen onBack={()=>setScreen('home')} onStart={startGame}/>;
   if(screen==='game'&&gameConfig) return <GameScreen {...gameConfig} onEnd={endGame} resumeState={resumeState}/>;
   if(screen==='history') return <HistoryScreen onBack={()=>setScreen('home')}/>;
+  if(screen==='settings') return <SettingsScreen onBack={()=>setScreen('home')}/>;
   return null;
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 
+</script>
+
+
+<!-- Service Worker registration — V20260611_18H30 -->
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js')
+    .then(reg => {
+      console.log('[Mölkky SW] Enregistré, scope :', reg.scope);
+      // Notifie si une mise à jour est disponible
+      reg.addEventListener('updatefound', () => {
+        const newWorker = reg.installing;
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            console.log('[Mölkky SW] Nouvelle version disponible — rechargez la page.');
+          }
+        });
+      });
+    })
+    .catch(err => console.warn('[Mölkky SW] Échec enregistrement :', err));
+}
 </script>
 </body>
 </html>
