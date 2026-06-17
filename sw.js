@@ -1,21 +1,41 @@
 // ═══════════════════════════════════════════════════════════
 //  Mölkky Score — Service Worker
-//  Version : V20260611_18H30
+//  Version : V20260617_1207
 //  À mettre à jour à chaque nouvelle livraison (même valeur
 //  que APP_VERSION dans index.html)
 // ═══════════════════════════════════════════════════════════
 
-const APP_VERSION = 'V20260611_18H30';
+const APP_VERSION = 'V20260617_1207';
 const CACHE_NAME  = 'molky-cache-' + APP_VERSION;
 
 // Liste des ressources à mettre en cache au démarrage
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
-  'https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800;900&display=swap',
-  'https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js',
+  './manifest.webmanifest',
+  './fonts.css',
+  './styles.css',
+  './constants.js',
+  './formatters.js',
+  './components.js',
+  './game-components.js',
+  './game-state.js',
+  './dialogs.js',
+  './setup-screen.js',
+  './rules.js',
+  './storage.js',
+  './app.js',
+  './vendor/react.production.min.js',
+  './vendor/react-dom.production.min.js',
+  './fonts/fredoka-one-400.ttf',
+  './fonts/nunito-400.ttf',
+  './fonts/nunito-600.ttf',
+  './fonts/nunito-700.ttf',
+  './fonts/nunito-800.ttf',
+  './fonts/nunito-900.ttf',
+  './icons/icon-180.png',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
 ];
 
 // ── Install : mise en cache de toutes les ressources ─────────
@@ -23,7 +43,13 @@ self.addEventListener('install', event => {
   console.log('[Mölkky SW] Install — version', APP_VERSION);
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(ASSETS_TO_CACHE))
+      .then(cache => Promise.all(
+        ASSETS_TO_CACHE.map(asset =>
+          cache.add(asset).catch(err => {
+            console.warn('[Mölkky SW] Ressource non mise en cache :', asset, err);
+          })
+        )
+      ))
       .then(() => self.skipWaiting())   // active immédiatement
   );
 });
@@ -49,26 +75,36 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
 
+  const requestUrl = new URL(event.request.url);
+  const isLocalRequest = requestUrl.origin === self.location.origin;
+  const isNavigation = event.request.mode === 'navigate';
+
+  if (isNavigation || isLocalRequest) {
+    event.respondWith(
+      caches.match(event.request)
+        .then(cachedResponse => cachedResponse || fetch(event.request)
+          .then(networkResponse => {
+            if (networkResponse && networkResponse.status === 200) {
+              const responseClone = networkResponse.clone();
+              caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseClone));
+            }
+            return networkResponse;
+          })
+        )
+        .catch(() => isNavigation ? caches.match('./index.html') : undefined)
+    );
+    return;
+  }
+
   event.respondWith(
     fetch(event.request)
       .then(networkResponse => {
-        // Mise à jour du cache avec la réponse fraîche
         if (networkResponse && networkResponse.status === 200) {
           const responseClone = networkResponse.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseClone));
         }
         return networkResponse;
       })
-      .catch(() => {
-        // Réseau indisponible → on sert depuis le cache
-        return caches.match(event.request)
-          .then(cachedResponse => {
-            if (cachedResponse) return cachedResponse;
-            // Fallback ultime : renvoyer index.html pour les navigations
-            if (event.request.mode === 'navigate') {
-              return caches.match('./index.html');
-            }
-          });
-      })
+      .catch(() => caches.match(event.request))
   );
 });

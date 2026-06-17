@@ -1,0 +1,13 @@
+{
+  "scripts": {
+    "build": "node scripts/build.js",
+    "test": "npm run test:helpers && npm run test:rules && npm run test:game-state && npm run test:storage && npm run test:encoding && npm run test:functional",
+    "test:helpers": "node scripts/test-helpers.js",
+    "test:rules": "node scripts/test-rules.js",
+    "test:game-state": "node scripts/test-game-state.js",
+    "test:storage": "node scripts/test-storage.js",
+    "test:encoding": "node scripts/test-encoding.js",
+    "test:functional": "node scripts/test-functional.js"
+  },
+  "private": true
+}
