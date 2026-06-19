@@ -89,10 +89,12 @@
     }, React.createElement("div", {
       className: "turn-label"
     }, "Tour de ", React.createElement("span", {
+      className: "turn-team-name",
       style: {
         color: currentTeam.color
       }
     }, currentTeam.name), React.createElement("span", {
+      className: "turn-round-badge",
       style: {
         color: 'rgba(255,255,255,0.3)',
         fontSize: '14px'

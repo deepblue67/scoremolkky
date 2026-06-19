@@ -8,8 +8,8 @@ Il sert a deux usages :
 - permettre a une future intervention Codex de reprendre vite, sans redecouvrir toute l'architecture.
 
 Date de mise a jour du README : 2026-06-19.
-Version documentee de l'application : `V20260619_1850`.
-Derniere validation connue : `npm run build V20260619_1850`, puis `npm test`.
+Version documentee de l'application : `V20260619_1919`.
+Derniere validation connue : `npm run build V20260619_1919`, puis `npm test`.
 
 ## Resume court
 
@@ -188,7 +188,7 @@ Ces fichiers sont servis par GitHub Pages et doivent etre publies.
 La version courante est :
 
 ```text
-V20260619_1850
+V20260619_1919
 ```
 
 Elle est synchronisee dans :
@@ -211,7 +211,7 @@ npm run build VYYYYMMDD_HHMM
 Exemple :
 
 ```bash
-npm run build V20260619_1850
+npm run build V20260619_1919
 ```
 
 ## Commandes
@@ -395,6 +395,7 @@ npm test
 | V20260619_1315 | Accueil plus sobre, actions historique/reglages deplacees en secondaire, libelle de partie et reordonnancement des equipes avant lancement. |
 | V20260619_1819 | Passe mobile/accessibilite : focus visible, cibles tactiles 44px, historique ouvrable au clavier et test automatise dedie. |
 | V20260619_1850 | Reequilibrage de l'ecran de jeu : scoreboard compact, tour plus visible, panneau de lancer renforce, grille de quilles 4x3 et actions basses resserrees. |
+| V20260619_1919 | Nettete du nom d'equipe actif : reduction du halo, round separe en badge et titre de tour plus lisible. |
 
 ## Comment maintenir ce README
 
@@ -418,7 +419,7 @@ Les tableaux ci-dessous sont le suivi officiel.
 | Assets locaux | Ajouter React, polices, icones et manifest localement. | Fait | Haute | Necessaire pour PWA autonome. |
 | Extraction CSS | Sortir les styles de `index.html` vers `styles.css`. | Fait | Haute | Rend `index.html` maintenable. |
 | Build workflow | Ajouter `scripts/build.js` et synchroniser les fichiers generes. | Fait | Haute | Commande : `npm run build`. |
-| Version PWA | Synchroniser `APP_VERSION` entre `index.html`, `sw.js`, `src/app.js`, `app.js`. | Fait | Haute | Version actuelle `V20260619_1850`. |
+| Version PWA | Synchroniser `APP_VERSION` entre `index.html`, `sw.js`, `src/app.js`, `app.js`. | Fait | Haute | Version actuelle `V20260619_1919`. |
 | Service worker | Mettre en cache les assets locaux et permettre reload offline. | Fait | Haute | Teste via Playwright. |
 | Decoupage `rules.js` | Extraire les regles pures du Molkky. | Fait | Haute | Teste par `test:rules`. |
 | Decoupage `storage.js` | Extraire la persistance `localStorage`. | Fait | Haute | Teste par `test:storage`. |
@@ -431,7 +432,7 @@ Les tableaux ci-dessous sont le suivi officiel.
 | Tests unitaires | Couvrir helpers, regles, moteur et stockage. | Fait | Haute | 4 suites unitaires metier + encodage. |
 | Tests fonctionnels | Couvrir parcours navigateur critiques. | Fait | Haute | `test:functional`, Playwright. |
 | Test encodage | Eviter le retour de texte mojibake. | Fait | Haute | `test:encoding`. |
-| Verification assets | Verifier que les references HTML/SW existent. | Fait | Haute | Controle fait avant livraison `V20260619_1850`. |
+| Verification assets | Verifier que les references HTML/SW existent. | Fait | Haute | Controle fait avant livraison `V20260619_1919`. |
 | README carnet de bord | Documenter fonctionnement, structure, suivi et historique. | Fait | Haute | Ce fichier est la reference officielle. |
 | Accueil plus sobre | Retirer les actions historique/reglages de l'en-tete et les presenter comme actions secondaires. | Fait | Moyenne | Ajoute en `V20260619_1315`. |
 | Test mobile/accessibilite | Automatiser controles viewport mobile, focus, cibles tactiles et clavier. | Fait | Haute | Suite `test:a11y-mobile`, ajoutee en `V20260619_1819`. |
@@ -455,7 +456,7 @@ Les tableaux ci-dessous sont le suivi officiel.
 | Couleurs equipe | Couleurs automatiques par equipe. | Fait | Moyenne | Constantes dans `constants.js`. |
 | Handicap | Donner des points de depart a une equipe. | Fait | Moyenne | Present dans setup. |
 | Score cible | Choisir 30, 40, 50 ou 75. | Fait | Haute | 50 reste le mode officiel. |
-| Ecran de lancer | Mettre en valeur le joueur courant, le score du lancer et l'etat apres lancer. | Fait | Haute | Panneau compact renforce en `V20260619_1850`. |
+| Ecran de lancer | Mettre en valeur le joueur courant, le score du lancer et l'etat apres lancer. | Fait | Haute | Panneau compact renforce en `V20260619_1850`, nom actif clarifie en `V20260619_1919`. |
 | Calcul lancer | Une quille = numero, plusieurs quilles = nombre. | Fait | Haute | Teste par `test:rules`. |
 | Lancer rate | Bouton rate, 0 point, avance au joueur suivant. | Fait | Haute | Test fonctionnel existant. |
 | Elimination par rates | Eliminer apres N rates consecutifs. | Fait | Haute | Teste en moteur et Playwright. |

@@ -1,11 +1,11 @@
 // ═══════════════════════════════════════════════════════════
 //  Mölkky Score — Service Worker
-//  Version : V20260619_1850
+//  Version : V20260619_1919
 //  À mettre à jour à chaque nouvelle livraison (même valeur
 //  que APP_VERSION dans index.html)
 // ═══════════════════════════════════════════════════════════
 
-const APP_VERSION = 'V20260619_1850';
+const APP_VERSION = 'V20260619_1919';
 const CACHE_NAME  = 'molky-cache-' + APP_VERSION;
 
 // Liste des ressources à mettre en cache au démarrage
