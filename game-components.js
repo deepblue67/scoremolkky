@@ -30,15 +30,17 @@
     }, "\u25BC"), team.eliminated && React.createElement("div", {
       className: "elim-badge"
     }, "\u274C"), React.createElement("div", {
+      className: "team-score-top"
+    }, React.createElement("div", {
       className: "team-name-label",
       style: {
         color: team.color
       }
     }, team.name), React.createElement("div", {
-      className: "team-score-value"
-    }, team.score), React.createElement("div", {
       className: "team-score-remain"
-    }, "\u2192 ", targetScore - team.score, " pts"), team.overflowStrikes > 0 && React.createElement("div", {
+    }, targetScore - team.score, " pts")), React.createElement("div", {
+      className: "team-score-value"
+    }, team.score), team.overflowStrikes > 0 && React.createElement("div", {
       style: {
         fontSize: '10px',
         color: '#f39c12',
@@ -71,6 +73,8 @@
     onConfirmThrow,
     onAbandon,
   }) {
+    const hasSelection = selectedPins.length > 0;
+    const selectedLabel = hasSelection ? selectedPins.length === 1 ? `Quille ${selectedPins[0]}` : `${selectedPins.length} quilles` : 'Aucune quille';
     return React.createElement("div", {
       className: "game-main",
       style: {
@@ -99,26 +103,26 @@
         paddingTop: '10px'
       }
     }, React.createElement("div", {
-      className: "score-preview-inner"
+      className: `score-preview-inner ${hasSelection ? 'has-selection' : ''}`
     }, React.createElement("div", {
-      className: "score-col"
+      className: "score-col score-col-side"
     }, React.createElement("span", {
       className: "score-col-label"
     }, "Mon score"), React.createElement("span", {
       className: "score-col-value"
     }, currentTeam.score)), React.createElement("div", {
-      className: "score-col"
+      className: "score-col score-col-main"
     }, React.createElement("span", {
       className: "score-col-label"
-    }, "Ce lancer"), React.createElement("span", {
-      className: `score-col-value ${selectedPins.length > 0 ? 'active' : ''}`
-    }, selectedPins.length === 0 ? '\u2014' : throwScore)), React.createElement("div", {
-      className: "score-col"
+    }, selectedLabel), React.createElement("span", {
+      className: `score-col-value throw-value ${hasSelection ? 'active' : ''}`
+    }, hasSelection ? `+${throwScore}` : '\u2014')), React.createElement("div", {
+      className: "score-col score-col-side"
     }, React.createElement("span", {
       className: "score-col-label"
-    }, willOverflow ? overflowLabel : 'Après'), React.createElement("span", {
-      className: `score-col-value ${selectedPins.length > 0 ? willOverflow ? 'overflow' : 'after' : ''}`
-    }, selectedPins.length === 0 ? '\u2014' : displayAfter)))), React.createElement("div", {
+    }, hasSelection && willOverflow ? overflowLabel : 'Apr\xE8s'), React.createElement("span", {
+      className: `score-col-value ${hasSelection ? willOverflow ? 'overflow' : 'after' : ''}`
+    }, hasSelection ? displayAfter : '\u2014')))), React.createElement("div", {
       className: "pins-grid-container"
     }, React.createElement("div", {
       className: "pins-grid"
@@ -137,7 +141,7 @@
       className: "miss-bar-btn",
       "aria-label": "Valider un lancer rat\xE9 sans quille renvers\xE9e",
       onClick: onConfirmMiss
-    }, "\u2717 \xA0 Rat\xE9 \u2014 aucune quille renvers\xE9e")), React.createElement("div", {
+    }, "\u2717 \xA0 Rat\xE9")), React.createElement("div", {
       className: "bottom-action-row"
     }, React.createElement("button", {
       className: "abandon-btn",
