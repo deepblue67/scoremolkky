@@ -8,8 +8,8 @@ Il sert a deux usages :
 - permettre a une future intervention Codex de reprendre vite, sans redecouvrir toute l'architecture.
 
 Date de mise a jour du README : 2026-06-19.
-Version documentee de l'application : `V20260619_1315`.
-Derniere validation connue : `npm run build V20260619_1315`, puis `npm test`.
+Version documentee de l'application : `V20260619_1819`.
+Derniere validation connue : `npm run build V20260619_1819`, puis `npm test`.
 
 ## Resume court
 
@@ -188,7 +188,7 @@ Ces fichiers sont servis par GitHub Pages et doivent etre publies.
 La version courante est :
 
 ```text
-V20260619_1315
+V20260619_1819
 ```
 
 Elle est synchronisee dans :
@@ -211,7 +211,7 @@ npm run build VYYYYMMDD_HHMM
 Exemple :
 
 ```bash
-npm run build V20260619_1315
+npm run build V20260619_1819
 ```
 
 ## Commandes
@@ -229,6 +229,7 @@ npm run test:game-state
 npm run test:storage
 npm run test:encoding
 npm run test:functional
+npm run test:a11y-mobile
 ```
 
 Build simple :
@@ -251,7 +252,7 @@ npm test
 
 ## Tests
 
-Nombre de suites appelees par `npm test` : 6.
+Nombre de suites appelees par `npm test` : 7.
 
 Suites actuelles :
 
@@ -263,6 +264,7 @@ Suites actuelles :
 | `test:storage` | `scripts/test-storage.js` | Verifie `localStorage`, historique et nettoyage. |
 | `test:encoding` | `scripts/test-encoding.js` | Detecte les problemes d'encodage/mojibake. |
 | `test:functional` | `scripts/test-functional.js` | Lance un serveur local et teste l'app dans Chromium via Playwright. |
+| `test:a11y-mobile` | `scripts/test-a11y-mobile.js` | Verifie viewport mobile, cibles tactiles, focus clavier et historique au clavier. |
 
 Parcours fonctionnels couverts :
 
@@ -277,7 +279,11 @@ Parcours fonctionnels couverts :
 - depassement avec grace ;
 - penalite de depassement ;
 - victoire par elimination ;
-- reload offline via service worker.
+- reload offline via service worker ;
+- absence de debordement horizontal en viewport mobile ;
+- cibles tactiles minimales ;
+- focus clavier visible ;
+- ouverture d'une partie d'historique au clavier.
 
 Point Playwright important :
 
@@ -387,6 +393,7 @@ npm test
 | Livraison | Generation de `V20260617_1207`, verification assets, `npm test` complet OK. |
 | Carnet de bord | README promu comme documentation officielle a maintenir a chaque evolution. |
 | V20260619_1315 | Accueil plus sobre, actions historique/reglages deplacees en secondaire, libelle de partie et reordonnancement des equipes avant lancement. |
+| V20260619_1819 | Passe mobile/accessibilite : focus visible, cibles tactiles 44px, historique ouvrable au clavier et test automatise dedie. |
 
 ## Comment maintenir ce README
 
@@ -410,7 +417,7 @@ Les tableaux ci-dessous sont le suivi officiel.
 | Assets locaux | Ajouter React, polices, icones et manifest localement. | Fait | Haute | Necessaire pour PWA autonome. |
 | Extraction CSS | Sortir les styles de `index.html` vers `styles.css`. | Fait | Haute | Rend `index.html` maintenable. |
 | Build workflow | Ajouter `scripts/build.js` et synchroniser les fichiers generes. | Fait | Haute | Commande : `npm run build`. |
-| Version PWA | Synchroniser `APP_VERSION` entre `index.html`, `sw.js`, `src/app.js`, `app.js`. | Fait | Haute | Version actuelle `V20260619_1315`. |
+| Version PWA | Synchroniser `APP_VERSION` entre `index.html`, `sw.js`, `src/app.js`, `app.js`. | Fait | Haute | Version actuelle `V20260619_1819`. |
 | Service worker | Mettre en cache les assets locaux et permettre reload offline. | Fait | Haute | Teste via Playwright. |
 | Decoupage `rules.js` | Extraire les regles pures du Molkky. | Fait | Haute | Teste par `test:rules`. |
 | Decoupage `storage.js` | Extraire la persistance `localStorage`. | Fait | Haute | Teste par `test:storage`. |
@@ -423,16 +430,17 @@ Les tableaux ci-dessous sont le suivi officiel.
 | Tests unitaires | Couvrir helpers, regles, moteur et stockage. | Fait | Haute | 4 suites unitaires metier + encodage. |
 | Tests fonctionnels | Couvrir parcours navigateur critiques. | Fait | Haute | `test:functional`, Playwright. |
 | Test encodage | Eviter le retour de texte mojibake. | Fait | Haute | `test:encoding`. |
-| Verification assets | Verifier que les references HTML/SW existent. | Fait | Haute | Controle fait avant livraison `V20260619_1315`. |
+| Verification assets | Verifier que les references HTML/SW existent. | Fait | Haute | Controle fait avant livraison `V20260619_1819`. |
 | README carnet de bord | Documenter fonctionnement, structure, suivi et historique. | Fait | Haute | Ce fichier est la reference officielle. |
 | Accueil plus sobre | Retirer les actions historique/reglages de l'en-tete et les presenter comme actions secondaires. | Fait | Moyenne | Ajoute en `V20260619_1315`. |
+| Test mobile/accessibilite | Automatiser controles viewport mobile, focus, cibles tactiles et clavier. | Fait | Haute | Suite `test:a11y-mobile`, ajoutee en `V20260619_1819`. |
 | Extraire `WinScreen` | Sortir l'ecran de victoire de `src/app.js`. | A faire | Moyenne | Utile pour reduire `app.js`, pas bloquant. |
 | Extraire historique/stats | Sortir `HistoryScreen`, `GameDetailScreen`, `PlayerStatsScreen`. | A faire | Moyenne | Bon prochain chantier structurel. |
 | Extraire settings/home | Sortir `SettingsScreen` et `HomeScreen`. | Moyen terme | Moyenne | Nettoyage de lisibilite. |
 | Refondre en bundler moderne | Passer a Vite/React modules ES. | A eviter pour l'instant | Basse | Trop gros changement avant besoin reel. |
 | Refonte complete UI | Repenser toute l'interface. | A eviter pour l'instant | Basse | Risque eleve, valeur faible a court terme. |
-| Tests accessibilite | Ajouter controles focus/clavier/contrastes. | A faire | Moyenne | Interessant avant large diffusion. |
-| Audit mobile reel | Tester installation mobile et offline sur telephone. | A faire | Haute | Complement manuel aux tests Playwright. |
+| Tests accessibilite | Ajouter controles focus/clavier/contrastes. | Partiel | Moyenne | Focus/clavier/cibles tactiles automatises ; contrastes a approfondir. |
+| Audit mobile reel | Tester installation mobile et offline sur telephone. | A faire | Haute | Complement manuel aux tests Playwright mobile. |
 
 ## Tableau de suivi - Gameplay et usage
 
@@ -465,8 +473,8 @@ Les tableaux ci-dessous sont le suivi officiel.
 | Statistiques joueurs | Afficher stats globales par joueur/equipe. | Fait | Moyenne | Present dans l'app. |
 | Mode offline | Recharger l'app hors connexion apres cache. | Fait | Haute | Test fonctionnel existant. |
 | Aide sur les regles | Popups d'aide sur elimination, handicap, depassement. | Fait | Moyenne | Present dans setup. |
-| Accessibilite clavier | Verifier navigation clavier et focus visible. | A faire | Moyenne | Non audite en profondeur. |
-| Lisibilite mobile terrain | Tester sur vrais petits ecrans. | A faire | Moyenne | Playwright couvre viewport mobile, pas un vrai appareil. |
+| Accessibilite clavier | Verifier navigation clavier et focus visible. | Partiel | Moyenne | Focus visible et historique clavier testes en `test:a11y-mobile`. |
+| Lisibilite mobile terrain | Tester sur vrais petits ecrans. | Partiel | Moyenne | Viewport 320px automatise ; vrai appareil encore a faire. |
 | Sons/vibrations | Ajouter retours sensoriels. | Moyen terme | Basse | Pas prioritaire. |
 | Export historique | Export CSV/JSON des parties. | Moyen terme | Basse | Idee future utile. |
 | Mode tournoi | Gerer plusieurs parties/classement tournoi. | Moyen terme | Basse | Nouvelle fonctionnalite importante, a cadrer. |

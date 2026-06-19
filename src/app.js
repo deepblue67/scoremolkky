@@ -28,7 +28,7 @@ const {
   estimateStorageSize,
   formatStorageSize
 } = MolkkyStorage;
-const APP_VERSION = 'V20260619_1315';
+const APP_VERSION = 'V20260619_1819';
 const {
   FieldDiagram
 } = MolkkyComponents;
@@ -736,6 +736,12 @@ function HistoryScreen({
       setSelected(null);
     }
   }
+  function openGameWithKeyboard(game, event) {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      setSelected(game);
+    }
+  }
   const globalStats = useMemo(() => {
     if (!history.length) return null;
     const wins = {};
@@ -873,7 +879,11 @@ function HistoryScreen({
   }, history.length, " partie", history.length > 1 ? 's' : '', " enregistr\xE9e", history.length > 1 ? 's' : ''), history.map(game => React.createElement("div", {
     key: game.id,
     className: "history-item",
+    role: "button",
+    tabIndex: 0,
+    "aria-label": `${game.label || 'Partie sans libell\xE9'}, gagn\xE9e par ${game.winner}`,
     onClick: () => setSelected(game),
+    onKeyDown: event => openGameWithKeyboard(game, event),
     style: {
       cursor: 'pointer',
       position: 'relative'
@@ -1392,6 +1402,7 @@ function HomeScreen({
     }
   }, React.createElement("button", {
     onClick: () => setRulesOpen(o => !o),
+    "aria-expanded": rulesOpen,
     style: {
       width: '100%',
       background: 'transparent',
