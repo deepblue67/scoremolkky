@@ -28,7 +28,7 @@ const {
   estimateStorageSize,
   formatStorageSize
 } = MolkkyStorage;
-const APP_VERSION = 'V20260619_1935';
+const APP_VERSION = 'V20260619_2008';
 const {
   FieldDiagram
 } = MolkkyComponents;
@@ -233,6 +233,8 @@ function GameScreen({
     overflowLabel: overflowLabel,
     displayAfter: displayAfter,
     recentHistory: recentHistory,
+    throwHistory: state.throws,
+    teams: state.teams,
     canUndo: throws.length > 0,
     onTogglePin: togglePin,
     onConfirmMiss: confirmMiss,

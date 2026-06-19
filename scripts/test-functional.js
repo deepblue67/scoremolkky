@@ -164,6 +164,20 @@ async function testThrowUndoAndMiss(page, baseUrl) {
   await page.getByText('Tour de Beta', { exact: false }).waitFor();
 }
 
+async function testCurrentMatchHistory(page, baseUrl) {
+  await startGame(page, baseUrl);
+
+  await playSinglePin(page, 7);
+  await missThrow(page);
+
+  await page.getByRole('button', { name: /historique des coups/i }).click();
+  await page.getByRole('dialog', { name: /Coups joués/i }).waitFor();
+  await page.getByText('Round 1', { exact: true }).waitFor();
+  await page.getByText('+7', { exact: true }).waitFor();
+  await page.getByText('Raté', { exact: true }).waitFor();
+  await page.getByRole('button', { name: /Fermer l'historique des coups/i }).click();
+}
+
 async function assertScore(page, teamName, score) {
   const scoreText = await page.locator('.team-score-card', { hasText: teamName }).first().locator('.team-score-current-value').textContent();
   assert.equal(scoreText.trim(), score);
@@ -258,6 +272,7 @@ async function main() {
 
     await testSetupLabelAndTeamOrder(page, baseUrl);
     await testThrowUndoAndMiss(page, baseUrl);
+    await testCurrentMatchHistory(page, baseUrl);
     await testWinAndHistory(page, baseUrl);
     await testOverflowGraceAndPenalty(page, baseUrl);
     await testEliminationWin(page, baseUrl);

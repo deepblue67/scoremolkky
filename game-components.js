@@ -9,6 +9,86 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function (React, constants) {
   const { SORTED_PINS } = constants;
 
+  function MatchHistorySheet({
+    throws,
+    teams,
+    onClose,
+  }) {
+    const rounds = [...(throws || [])].reverse().reduce((acc, entry, index) => {
+      const round = entry.roundBefore || 1;
+      if (!acc[round]) acc[round] = [];
+      acc[round].push({
+        ...entry,
+        displayIndex: throws.length - index,
+      });
+      return acc;
+    }, {});
+    const sortedRounds = Object.keys(rounds).map(Number).sort((a, b) => b - a);
+
+    function eventLabel(entry) {
+      if (entry.miss) return entry.eliminated ? 'Raté · élimination' : 'Raté';
+      if (entry.penalized) return 'Dépassement · pénalité';
+      if (entry.overflow) return 'Dépassement';
+      return entry.pins && entry.pins.length === 1 ? `Quille ${entry.pins[0]}` : `${entry.pins.length} quilles`;
+    }
+
+    function eventClass(entry) {
+      if (entry.eliminated || entry.penalized) return 'danger';
+      if (entry.miss || entry.overflow) return 'warning';
+      return 'normal';
+    }
+
+    return React.createElement("div", {
+      className: "match-history-overlay",
+      onClick: onClose
+    }, React.createElement("div", {
+      className: "match-history-sheet",
+      role: "dialog",
+      "aria-modal": "true",
+      "aria-labelledby": "match-history-title",
+      onClick: e => e.stopPropagation()
+    }, React.createElement("div", {
+      className: "match-history-header"
+    }, React.createElement("div", null, React.createElement("div", {
+      id: "match-history-title",
+      className: "match-history-title"
+    }, "Coups joués"), React.createElement("div", {
+      className: "match-history-subtitle"
+    }, throws.length, " coup", throws.length > 1 ? 's' : '', " dans cette partie")), React.createElement("button", {
+      type: "button",
+      className: "match-history-close",
+      "aria-label": "Fermer l'historique des coups",
+      onClick: onClose
+    }, "\u00D7")), throws.length === 0 ? React.createElement("div", {
+      className: "match-history-empty"
+    }, "Aucun coup joué pour l'instant.") : React.createElement("div", {
+      className: "match-history-list"
+    }, sortedRounds.map(round => React.createElement("section", {
+      key: round,
+      className: "match-history-round"
+    }, React.createElement("div", {
+      className: "match-history-round-title"
+    }, "Round ", round), rounds[round].map(entry => {
+      const team = teams[entry.teamIdx] || entry.teamBefore || {};
+      const scoreAfter = entry.scoreAfter !== undefined ? entry.scoreAfter : entry.scoreBefore;
+      return React.createElement("div", {
+        key: `${round}-${entry.displayIndex}`,
+        className: `match-history-row ${eventClass(entry)}`,
+        style: {
+          '--team-color': team.color || '#c8854a'
+        }
+      }, React.createElement("div", {
+        className: "match-history-team"
+      }, React.createElement("span", {
+        className: "match-history-dot"
+      }), React.createElement("span", null, team.name || `Équipe ${entry.teamIdx + 1}`)), React.createElement("div", {
+        className: "match-history-event"
+      }, React.createElement("strong", null, eventLabel(entry)), React.createElement("span", null, entry.miss ? `Score ${entry.scoreBefore}` : `${entry.scoreBefore} → ${scoreAfter}`)), React.createElement("div", {
+        className: "match-history-points"
+      }, entry.miss ? "\u2717" : `+${entry.points}`));
+    }))))));
+  }
+
   function GameScoreboard({
     teams,
     currentTeamIdx,
@@ -90,6 +170,8 @@
     overflowLabel,
     displayAfter,
     recentHistory,
+    throwHistory,
+    teams,
     canUndo,
     onTogglePin,
     onConfirmMiss,
@@ -97,6 +179,7 @@
     onConfirmThrow,
     onAbandon,
   }) {
+    const [historyOpen, setHistoryOpen] = React.useState(false);
     const hasSelection = selectedPins.length > 0;
     const selectedLabel = hasSelection ? selectedPins.length === 1 ? `Quille ${selectedPins[0]}` : `${selectedPins.length} quilles` : 'Aucune quille';
     return React.createElement("div", {
@@ -197,17 +280,18 @@
       className: "abandon-btn-icon"
     }, "\uD83C\uDFF3"), React.createElement("span", {
       className: "abandon-btn-label"
-    }, "Abandonner"))), recentHistory.length > 0 && React.createElement("div", {
-      className: "history-strip"
-    }, React.createElement("span", {
-      className: "history-label"
-    }, "R\xE9cent :"), recentHistory.map(h => React.createElement("div", {
-      key: h.key,
-      className: `history-chip ${h.type}`,
-      style: {
-        borderLeft: `3px solid ${h.team.color}`
-      }
-    }, h.label))), React.createElement("div", {
+    }, "Abandonner"))), React.createElement("div", {
+      className: "match-history-access"
+    }, React.createElement("button", {
+      type: "button",
+      className: "match-history-access-btn",
+      "aria-label": `Afficher l'historique des coups, ${(throwHistory || []).length} coups joués`,
+      onClick: () => setHistoryOpen(true)
+    }, "Coups jou\xE9s", React.createElement("span", null, (throwHistory || []).length))), historyOpen && React.createElement(MatchHistorySheet, {
+      throws: throwHistory || [],
+      teams: teams || [],
+      onClose: () => setHistoryOpen(false)
+    }), React.createElement("div", {
       style: {
         flexShrink: 0,
         height: 'max(4px,env(safe-area-inset-bottom))'

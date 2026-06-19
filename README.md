@@ -8,8 +8,8 @@ Il sert a deux usages :
 - permettre a une future intervention Codex de reprendre vite, sans redecouvrir toute l'architecture.
 
 Date de mise a jour du README : 2026-06-19.
-Version documentee de l'application : `V20260619_1935`.
-Derniere validation connue : `npm run build V20260619_1935`, puis `npm test`.
+Version documentee de l'application : `V20260619_2008`.
+Derniere validation connue : `npm run build V20260619_2008`, puis `npm test`.
 
 ## Resume court
 
@@ -48,6 +48,7 @@ Fonctionnalites principales :
 - valider un lancer ;
 - valider un lancer rate ;
 - annuler le dernier lancer ;
+- consulter les coups joues de la partie en cours ;
 - afficher les popups de depassement, penalite et elimination ;
 - detecter une victoire par score exact ;
 - detecter une victoire par elimination ;
@@ -188,7 +189,7 @@ Ces fichiers sont servis par GitHub Pages et doivent etre publies.
 La version courante est :
 
 ```text
-V20260619_1935
+V20260619_2008
 ```
 
 Elle est synchronisee dans :
@@ -211,7 +212,7 @@ npm run build VYYYYMMDD_HHMM
 Exemple :
 
 ```bash
-npm run build V20260619_1935
+npm run build V20260619_2008
 ```
 
 ## Commandes
@@ -397,6 +398,7 @@ npm test
 | V20260619_1850 | Reequilibrage de l'ecran de jeu : scoreboard compact, tour plus visible, panneau de lancer renforce, grille de quilles 4x3 et actions basses resserrees. |
 | V20260619_1919 | Nettete du nom d'equipe actif : reduction du halo, round separe en badge et titre de tour plus lisible. |
 | V20260619_1935 | Scoreboard enrichi : score et points restants affiches comme deux metriques equivalentes, avec signal jouable quand le reste est atteignable en un lancer. |
+| V20260619_2008 | Remplacement de la ligne recente par un bouton Coups joues et une bottom sheet listant les coups, rates, depassements, penalites et eliminations de la partie en cours. |
 
 ## Comment maintenir ce README
 
@@ -420,7 +422,7 @@ Les tableaux ci-dessous sont le suivi officiel.
 | Assets locaux | Ajouter React, polices, icones et manifest localement. | Fait | Haute | Necessaire pour PWA autonome. |
 | Extraction CSS | Sortir les styles de `index.html` vers `styles.css`. | Fait | Haute | Rend `index.html` maintenable. |
 | Build workflow | Ajouter `scripts/build.js` et synchroniser les fichiers generes. | Fait | Haute | Commande : `npm run build`. |
-| Version PWA | Synchroniser `APP_VERSION` entre `index.html`, `sw.js`, `src/app.js`, `app.js`. | Fait | Haute | Version actuelle `V20260619_1935`. |
+| Version PWA | Synchroniser `APP_VERSION` entre `index.html`, `sw.js`, `src/app.js`, `app.js`. | Fait | Haute | Version actuelle `V20260619_2008`. |
 | Service worker | Mettre en cache les assets locaux et permettre reload offline. | Fait | Haute | Teste via Playwright. |
 | Decoupage `rules.js` | Extraire les regles pures du Molkky. | Fait | Haute | Teste par `test:rules`. |
 | Decoupage `storage.js` | Extraire la persistance `localStorage`. | Fait | Haute | Teste par `test:storage`. |
@@ -433,11 +435,12 @@ Les tableaux ci-dessous sont le suivi officiel.
 | Tests unitaires | Couvrir helpers, regles, moteur et stockage. | Fait | Haute | 4 suites unitaires metier + encodage. |
 | Tests fonctionnels | Couvrir parcours navigateur critiques. | Fait | Haute | `test:functional`, Playwright. |
 | Test encodage | Eviter le retour de texte mojibake. | Fait | Haute | `test:encoding`. |
-| Verification assets | Verifier que les references HTML/SW existent. | Fait | Haute | Controle fait avant livraison `V20260619_1935`. |
+| Verification assets | Verifier que les references HTML/SW existent. | Fait | Haute | Controle fait avant livraison `V20260619_2008`. |
 | README carnet de bord | Documenter fonctionnement, structure, suivi et historique. | Fait | Haute | Ce fichier est la reference officielle. |
 | Accueil plus sobre | Retirer les actions historique/reglages de l'en-tete et les presenter comme actions secondaires. | Fait | Moyenne | Ajoute en `V20260619_1315`. |
 | Test mobile/accessibilite | Automatiser controles viewport mobile, focus, cibles tactiles et clavier. | Fait | Haute | Suite `test:a11y-mobile`, ajoutee en `V20260619_1819`. |
 | Ecran de jeu compact | Reequilibrer les zones de score, tour, quilles et actions sur mobile. | Fait | Haute | Grille 4x3 en portrait, ajout en `V20260619_1850`. |
+| Historique coups en cours | Remplacer la ligne recente par une vue lisible de tous les coups de la partie. | Fait | Haute | Bottom sheet `Coups joues`, ajoutee en `V20260619_2008`. |
 | Extraire `WinScreen` | Sortir l'ecran de victoire de `src/app.js`. | A faire | Moyenne | Utile pour reduire `app.js`, pas bloquant. |
 | Extraire historique/stats | Sortir `HistoryScreen`, `GameDetailScreen`, `PlayerStatsScreen`. | A faire | Moyenne | Bon prochain chantier structurel. |
 | Extraire settings/home | Sortir `SettingsScreen` et `HomeScreen`. | Moyen terme | Moyenne | Nettoyage de lisibilite. |
@@ -474,6 +477,7 @@ Les tableaux ci-dessous sont le suivi officiel.
 | Annuler dernier lancer | Restaurer l'etat precedent complet. | Fait | Haute | Teste moteur et fonctionnel. |
 | Revanche | Relancer avec etat frais. | Fait | Haute | Corrige pendant les premieres etapes. |
 | Sauvegarde partie en cours | Reprendre apres reload. | Fait | Haute | Via `localStorage`. |
+| Historique coups en cours | Voir les coups, rates, depassements, penalites et eliminations de la partie active. | Fait | Haute | Test fonctionnel ajoute en `V20260619_2008`. |
 | Historique parties | Consulter les parties terminees. | Fait | Moyenne | Test fonctionnel existant. |
 | Statistiques joueurs | Afficher stats globales par joueur/equipe. | Fait | Moyenne | Present dans l'app. |
 | Mode offline | Recharger l'app hors connexion apres cache. | Fait | Haute | Test fonctionnel existant. |
