@@ -109,7 +109,7 @@ function SetupScreen({
       width: '70px'
     }
   })), React.createElement("div", {
-    className: "scroll-content"
+    className: "scroll-content setup-scroll"
   }, React.createElement("div", {
     className: "card"
   }, React.createElement("div", {
@@ -130,6 +130,7 @@ function SetupScreen({
     className: "card-title"
   }, "\uD83D\uDC65 \xC9quipes"), teams.map((team, i) => React.createElement("div", {
     key: i,
+    className: "setup-team-row",
     style: {
       marginBottom: '12px'
     }
@@ -172,6 +173,7 @@ function SetupScreen({
     "aria-label": `Supprimer ${team.name || `l'équipe ${i + 1}`}`,
     onClick: () => removeTeam(i)
   }, "\xD7")), React.createElement("div", {
+    className: "team-handicap-row",
     style: {
       display: 'flex',
       alignItems: 'center',

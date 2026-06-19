@@ -8,8 +8,8 @@ Il sert a deux usages :
 - permettre a une future intervention Codex de reprendre vite, sans redecouvrir toute l'architecture.
 
 Date de mise a jour du README : 2026-06-19.
-Version documentee de l'application : `V20260619_2008`.
-Derniere validation connue : `npm run build V20260619_2008`, puis `npm test`.
+Version documentee de l'application : `V20260619_2350`.
+Derniere validation connue : `npm run build V20260619_2350`, puis `npm test`.
 
 ## Resume court
 
@@ -189,7 +189,7 @@ Ces fichiers sont servis par GitHub Pages et doivent etre publies.
 La version courante est :
 
 ```text
-V20260619_2008
+V20260619_2350
 ```
 
 Elle est synchronisee dans :
@@ -212,7 +212,7 @@ npm run build VYYYYMMDD_HHMM
 Exemple :
 
 ```bash
-npm run build V20260619_2008
+npm run build V20260619_2350
 ```
 
 ## Commandes
@@ -399,6 +399,8 @@ npm test
 | V20260619_1919 | Nettete du nom d'equipe actif : reduction du halo, round separe en badge et titre de tour plus lisible. |
 | V20260619_1935 | Scoreboard enrichi : score et points restants affiches comme deux metriques equivalentes, avec signal jouable quand le reste est atteignable en un lancer. |
 | V20260619_2008 | Remplacement de la ligne recente par un bouton Coups joues et une bottom sheet listant les coups, rates, depassements, penalites et eliminations de la partie en cours. |
+| V20260619_2314 | Compactage mobile de l'accueil pour afficher les actions sans scroll et stabilisation de la saisie des equipes sur petits ecrans. |
+| V20260619_2350 | Nouvelle livraison cache/PWA apres ajustement CSS final, pour forcer la mise a jour du service worker. |
 
 ## Comment maintenir ce README
 
@@ -422,7 +424,7 @@ Les tableaux ci-dessous sont le suivi officiel.
 | Assets locaux | Ajouter React, polices, icones et manifest localement. | Fait | Haute | Necessaire pour PWA autonome. |
 | Extraction CSS | Sortir les styles de `index.html` vers `styles.css`. | Fait | Haute | Rend `index.html` maintenable. |
 | Build workflow | Ajouter `scripts/build.js` et synchroniser les fichiers generes. | Fait | Haute | Commande : `npm run build`. |
-| Version PWA | Synchroniser `APP_VERSION` entre `index.html`, `sw.js`, `src/app.js`, `app.js`. | Fait | Haute | Version actuelle `V20260619_2008`. |
+| Version PWA | Synchroniser `APP_VERSION` entre `index.html`, `sw.js`, `src/app.js`, `app.js`. | Fait | Haute | Version actuelle `V20260619_2350`. |
 | Service worker | Mettre en cache les assets locaux et permettre reload offline. | Fait | Haute | Teste via Playwright. |
 | Decoupage `rules.js` | Extraire les regles pures du Molkky. | Fait | Haute | Teste par `test:rules`. |
 | Decoupage `storage.js` | Extraire la persistance `localStorage`. | Fait | Haute | Teste par `test:storage`. |
@@ -441,6 +443,7 @@ Les tableaux ci-dessous sont le suivi officiel.
 | Test mobile/accessibilite | Automatiser controles viewport mobile, focus, cibles tactiles et clavier. | Fait | Haute | Suite `test:a11y-mobile`, ajoutee en `V20260619_1819`. |
 | Ecran de jeu compact | Reequilibrer les zones de score, tour, quilles et actions sur mobile. | Fait | Haute | Grille 4x3 en portrait, ajout en `V20260619_1850`. |
 | Historique coups en cours | Remplacer la ligne recente par une vue lisible de tous les coups de la partie. | Fait | Haute | Bottom sheet `Coups joues`, ajoutee en `V20260619_2008`. |
+| Ergonomie mobile accueil/setup | Faire tenir les actions d'accueil sans scroll et supprimer les debordements horizontaux de configuration. | Fait | Haute | Ajoute en `V20260619_2314`. |
 | Extraire `WinScreen` | Sortir l'ecran de victoire de `src/app.js`. | A faire | Moyenne | Utile pour reduire `app.js`, pas bloquant. |
 | Extraire historique/stats | Sortir `HistoryScreen`, `GameDetailScreen`, `PlayerStatsScreen`. | A faire | Moyenne | Bon prochain chantier structurel. |
 | Extraire settings/home | Sortir `SettingsScreen` et `HomeScreen`. | Moyen terme | Moyenne | Nettoyage de lisibilite. |
@@ -457,6 +460,7 @@ Les tableaux ci-dessous sont le suivi officiel.
 | Equipes 2 a 6 | Ajouter, retirer et renommer les equipes. | Fait | Haute | Configure dans `setup-screen.js`. |
 | Libelle de partie | Nommer une partie et retrouver ce libelle dans l'historique/detail. | Fait | Moyenne | Ajoute et teste en `V20260619_1315`. |
 | Ordre de passage | Reordonner les equipes avant le lancement avec des boutons monter/descendre. | Fait | Haute | Ajoute et teste en `V20260619_1315`. |
+| Saisie equipes mobile | Stabiliser la zone nom, ordre et suppression sur petit ecran. | Fait | Haute | Grille compacte mobile en `V20260619_2314`. |
 | Couleurs equipe | Couleurs automatiques par equipe. | Fait | Moyenne | Constantes dans `constants.js`. |
 | Handicap | Donner des points de depart a une equipe. | Fait | Moyenne | Present dans setup. |
 | Score cible | Choisir 30, 40, 50 ou 75. | Fait | Haute | 50 reste le mode officiel. |

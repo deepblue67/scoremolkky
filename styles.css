@@ -106,6 +106,10 @@ input:focus-visible,
   padding: 16px;
   padding-bottom: max(20px, env(safe-area-inset-bottom));
 }
+.home-scroll,
+.setup-scroll {
+  overflow-x: hidden;
+}
 
 /* ===== CARDS ===== */
 .card {
@@ -244,6 +248,9 @@ input:focus-visible,
   position: relative;
   overflow: hidden;
 }
+.field-diagram svg {
+  max-width: 210px;
+}
 .field-diagram::before {
   content: '';
   position: absolute; inset: 0;
@@ -296,6 +303,7 @@ input:focus-visible,
   align-items: center;
   gap: 10px;
   margin-bottom: 10px;
+  min-width: 0;
 }
 .team-color-dot {
   width: 20px; height: 20px;
@@ -338,6 +346,8 @@ input:focus-visible,
 }
 .input-field {
   flex: 1;
+  min-width: 0;
+  width: 100%;
   padding: 10px 14px;
   border: 2px solid rgba(45,80,22,0.2);
   border-radius: var(--radius-sm);
@@ -987,6 +997,163 @@ input:focus-visible,
   transition: background 0.2s;
 }
 .miss-dot.filled { background: #e74c3c; }
+
+/* ===== COMPACT MOBILE LAYOUT ===== */
+@media (max-width: 480px) {
+  .app-header {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .app-title {
+    font-size: 24px;
+    line-height: 1.05;
+  }
+  .header-btn {
+    padding: 8px 12px;
+  }
+  .home-scroll {
+    padding: 10px 14px max(12px, env(safe-area-inset-bottom));
+  }
+  .home-hero {
+    padding: 14px 0 10px;
+  }
+  .home-hero-flag {
+    margin-bottom: 8px;
+    padding: 3px 10px;
+    font-size: 10px;
+  }
+  .home-hero h1 {
+    font-size: 42px;
+    margin-bottom: 5px;
+  }
+  .home-hero p {
+    font-size: 11px;
+    letter-spacing: 1.5px;
+  }
+  .field-diagram {
+    padding: 14px 12px 12px;
+    margin-bottom: 10px;
+    border-radius: 16px;
+  }
+  .field-title {
+    margin-bottom: 8px;
+    font-size: 10px;
+  }
+  .field-diagram svg {
+    max-width: 150px !important;
+  }
+  .distance-line {
+    margin: 10px 0 7px;
+  }
+  .throwing-zone {
+    gap: 8px;
+  }
+  .thrower-icon {
+    font-size: 18px;
+  }
+  .mölkky-icon {
+    height: 26px;
+  }
+  .btn-lg {
+    padding: 13px 18px;
+    font-size: 16px;
+  }
+  .home-secondary-actions {
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .setup-scroll {
+    padding: 12px;
+    padding-bottom: max(18px, env(safe-area-inset-bottom));
+  }
+  .setup-scroll .card {
+    padding: 14px;
+    margin-bottom: 12px;
+  }
+  .setup-scroll .card-title {
+    margin-bottom: 12px;
+  }
+  .setup-team-row {
+    min-width: 0;
+  }
+  .team-input-wrap {
+    display: grid;
+    grid-template-columns: 20px 22px minmax(0, 1fr) 44px 44px;
+    gap: 6px;
+    align-items: center;
+  }
+  .team-order-controls {
+    flex-direction: column;
+    width: 44px;
+    gap: 4px;
+  }
+  .order-btn {
+    width: 44px;
+    height: 44px;
+  }
+  .team-input-wrap .input-field {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+  .team-handicap-row {
+    padding-left: 0 !important;
+    gap: 8px !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .team-input-wrap {
+    grid-template-columns: 16px 20px minmax(0, 1fr) 44px 44px;
+    gap: 5px;
+  }
+  .team-color-dot {
+    width: 16px;
+    height: 16px;
+  }
+  .team-order-badge {
+    width: 20px;
+    height: 20px;
+    font-size: 11px;
+  }
+  .team-input-wrap .input-field {
+    font-size: 14px;
+  }
+}
+
+@media (max-height: 680px) and (max-width: 480px) {
+  .home-scroll {
+    padding-top: 8px;
+  }
+  .home-hero {
+    padding: 8px 0 8px;
+  }
+  .home-hero-flag {
+    margin-bottom: 6px;
+  }
+  .home-hero h1 {
+    font-size: 36px;
+  }
+  .field-diagram {
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+  .field-diagram svg {
+    max-width: 100px !important;
+  }
+  .field-title {
+    margin-bottom: 5px;
+  }
+  .distance-line {
+    margin: 6px 0 5px;
+  }
+  .throwing-zone span {
+    font-size: 10px !important;
+  }
+  .home-secondary-actions {
+    margin-top: 6px;
+  }
+}
 
 /* ===== LANDSCAPE ===== */
 @media (orientation: landscape) {

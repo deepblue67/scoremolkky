@@ -139,6 +139,24 @@ async function assertVisibleFocus(page) {
   assert.ok(hasOutline || hasShadow, `Focused element has no visible focus: ${JSON.stringify(focus)}`);
 }
 
+async function assertPrimaryHomeActionsVisible(page) {
+  const failures = await page.evaluate(() => {
+    const viewportHeight = window.innerHeight;
+    return Array.from(document.querySelectorAll('button'))
+      .filter(el => /Nouvelle Partie|Historique|Réglages|RÃ©glages/i.test(el.textContent))
+      .map(el => {
+        const rect = el.getBoundingClientRect();
+        return {
+          label: el.textContent.trim().replace(/\s+/g, ' '),
+          top: Math.round(rect.top),
+          bottom: Math.round(rect.bottom),
+        };
+      })
+      .filter(item => item.top < 0 || item.bottom > viewportHeight + 1);
+  });
+  assert.deepEqual(failures, [], 'home: primary actions should be visible without scrolling');
+}
+
 async function seedHistory(page) {
   await page.evaluate(() => {
     localStorage.clear();
@@ -165,6 +183,7 @@ async function auditHomeAndSetup(page, baseUrl) {
   await page.waitForSelector('h1');
   await assertNoHorizontalOverflow(page, 'home');
   await assertTouchTargets(page, 'home');
+  await assertPrimaryHomeActionsVisible(page);
   await assertVisibleFocus(page);
 
   await page.getByRole('button', { name: /Nouvelle partie/i }).click();

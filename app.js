@@ -27,7 +27,7 @@ const {
   estimateStorageSize,
   formatStorageSize
 } = MolkkyStorage;
-const APP_VERSION = 'V20260619_2008';
+const APP_VERSION = 'V20260619_2350';
 const {
   FieldDiagram
 } = MolkkyComponents;
@@ -1300,7 +1300,7 @@ function HomeScreen({
     className: "home-header-spacer",
     "aria-hidden": "true"
   })), React.createElement("div", {
-    className: "scroll-content"
+    className: "scroll-content home-scroll"
   }, React.createElement("div", {
     className: "home-hero"
   }, React.createElement("div", {
