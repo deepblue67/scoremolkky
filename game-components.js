@@ -22,7 +22,10 @@
 
     return React.createElement("div", {
       className: "scoreboard"
-    }, teams.map((team, i) => React.createElement("div", {
+    }, teams.map((team, i) => {
+      const remaining = targetScore - team.score;
+      const isPlayable = remaining > 0 && remaining <= 12;
+      return React.createElement("div", {
       key: i,
       className: `team-score-card ${i === currentTeamIdx ? 'active' : ''} ${team.eliminated ? 'eliminated' : ''}`
     }, i === currentTeamIdx && React.createElement("div", {
@@ -36,11 +39,31 @@
       style: {
         color: team.color
       }
-    }, team.name), React.createElement("div", {
-      className: "team-score-remain"
-    }, targetScore - team.score, " pts")), React.createElement("div", {
-      className: "team-score-value"
-    }, team.score), team.overflowStrikes > 0 && React.createElement("div", {
+    }, team.name), isPlayable && React.createElement("div", {
+      className: "team-playable-badge",
+      style: {
+        color: team.color,
+        borderColor: `${team.color}66`,
+        background: `${team.color}18`
+      }
+    }, "jouable")), React.createElement("div", {
+      className: "team-score-metrics"
+    }, React.createElement("div", {
+      className: "team-score-metric"
+    }, React.createElement("div", {
+      className: "team-score-metric-label"
+    }, "Score"), React.createElement("div", {
+      className: "team-score-value team-score-current-value"
+    }, team.score)), React.createElement("div", {
+      className: `team-score-metric team-score-metric-remain ${isPlayable ? 'playable' : ''}`,
+      style: {
+        '--team-color': team.color
+      }
+    }, React.createElement("div", {
+      className: "team-score-metric-label"
+    }, "Reste"), React.createElement("div", {
+      className: "team-score-value team-score-remain-value"
+    }, remaining))), team.overflowStrikes > 0 && React.createElement("div", {
       style: {
         fontSize: '10px',
         color: '#f39c12',
@@ -54,7 +77,8 @@
     }).map((_, j) => React.createElement("div", {
       key: j,
       className: `miss-dot ${j < team.misses ? 'filled' : ''}`
-    }))))));
+    }))));
+    }));
   }
 
   function GameTurnPanel({

@@ -165,7 +165,7 @@ async function testThrowUndoAndMiss(page, baseUrl) {
 }
 
 async function assertScore(page, teamName, score) {
-  const scoreText = await page.locator('.team-score-card', { hasText: teamName }).first().locator('.team-score-value').textContent();
+  const scoreText = await page.locator('.team-score-card', { hasText: teamName }).first().locator('.team-score-current-value').textContent();
   assert.equal(scoreText.trim(), score);
 }
 

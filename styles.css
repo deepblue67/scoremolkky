@@ -412,7 +412,7 @@ input:focus-visible,
   flex: 1;
   background: rgba(255,255,255,0.045);
   border: 1.5px solid rgba(255,255,255,0.08);
-  border-radius: 14px; padding: 9px 10px 8px;
+  border-radius: 14px; padding: 9px 9px 8px;
   text-align: center; position: relative; transition: all 0.25s;
   min-width: 0;
 }
@@ -426,8 +426,8 @@ input:focus-visible,
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 3px;
+  gap: 6px;
+  margin-bottom: 6px;
 }
 .team-name-label {
   font-size: 11px; font-weight: 900; text-transform: uppercase;
@@ -435,19 +435,62 @@ input:focus-visible,
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   min-width: 0;
 }
+.team-playable-badge {
+  border: 1px solid;
+  border-radius: 999px;
+  padding: 2px 6px;
+  font-size: 8px;
+  line-height: 1.2;
+  font-weight: 1000;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+.team-score-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  align-items: stretch;
+}
+.team-score-metric {
+  min-width: 0;
+  border-radius: 11px;
+  padding: 5px 3px 6px;
+  background: rgba(255,255,255,0.045);
+  border: 1px solid rgba(255,255,255,0.055);
+}
+.team-score-metric-remain {
+  background: rgba(255,255,255,0.075);
+}
+.team-score-metric-remain.playable {
+  background: rgba(255,255,255,0.105);
+  border-color: var(--team-color);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05), 0 0 12px rgba(255,255,255,0.04);
+}
+.team-score-metric-label {
+  margin-bottom: 2px;
+  color: rgba(255,255,255,0.42);
+  font-size: 8px;
+  font-weight: 1000;
+  line-height: 1;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
 .team-score-value {
   font-family: 'Fredoka One', cursive;
-  font-size: 35px; color: #fff; line-height: 0.95;
+  font-size: 31px; color: #fff; line-height: 0.95;
 }
-.team-score-remain {
-  display: inline-flex; align-items: center; justify-content: center;
-  background: rgba(255,255,255,0.08); border-radius: 999px;
-  padding: 3px 8px; font-size: 11px; font-weight: 900;
-  color: rgba(255,255,255,0.7); letter-spacing: 0.3px;
-  white-space: nowrap;
+.team-score-remain-value {
+  color: var(--team-color);
+  text-shadow: 0 1px 0 rgba(0,0,0,0.35);
 }
-.team-score-card.active .team-score-remain {
-  background: rgba(255,255,255,0.16); color: #fff;
+.team-score-card.active .team-score-metric-remain {
+  background: rgba(255,255,255,0.12);
+  border-color: rgba(255,255,255,0.16);
+}
+.team-score-card.active .team-score-metric-remain.playable {
+  background: rgba(255,255,255,0.14);
+  border-color: var(--team-color);
 }
 .active-arrow {
   position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
