@@ -57,9 +57,11 @@
     teams,
     targetScore,
     rules,
+    gameLabel = '',
     startedAt = Date.now(),
   }) {
     return {
+      gameLabel,
       teams: teams.map(createTeamState),
       currentTeamIdx: 0,
       selectedPins: [],

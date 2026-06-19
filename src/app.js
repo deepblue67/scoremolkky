@@ -28,7 +28,7 @@ const {
   estimateStorageSize,
   formatStorageSize
 } = MolkkyStorage;
-const APP_VERSION = 'V20260617_1207';
+const APP_VERSION = 'V20260619_1315';
 const {
   FieldDiagram
 } = MolkkyComponents;
@@ -58,6 +58,7 @@ function GameScreen({
   teams: initialTeams,
   targetScore,
   rules,
+  gameLabel = '',
   onEnd,
   resumeState
 }) {
@@ -65,7 +66,8 @@ function GameScreen({
   const initState = (forceFresh = false) => !forceFresh && resumeState || createInitialGameState({
     teams: initialTeams,
     targetScore,
-    rules: initialRules
+    rules: initialRules,
+    gameLabel
   });
   const [state, setState] = useState(initState);
   const [winner, setWinner] = useState(null);
@@ -127,7 +129,8 @@ function GameScreen({
           setWinner({
             team: reaction.team,
             teams: result.newTeams,
-            duration: dur
+            duration: dur,
+            gameLabel: s.gameLabel || gameLabel
           });
         }, 300);
       } else if (reaction.type === 'popup') {
@@ -150,7 +153,8 @@ function GameScreen({
           setWinner({
             team: reaction.winnerTeam,
             teams: result.newTeams,
-            duration: dur
+            duration: dur,
+            gameLabel: s.gameLabel || gameLabel
           });
         }, reaction.winnerDelay || 2200);
       } else if (reaction.type === 'toast') {
@@ -248,7 +252,8 @@ function WinScreen({
   const {
     team,
     teams,
-    duration
+    duration,
+    gameLabel
   } = winner;
   const misses = team.history ? team.history.filter(h => h.miss).length : 0;
   const scoring = team.history ? team.history.filter(h => !h.miss) : [];
@@ -257,6 +262,7 @@ function WinScreen({
     addGameToHistory({
       id: Date.now(),
       date: Date.now(),
+      label: gameLabel || '',
       duration,
       targetScore,
       winner: team.name,
@@ -605,6 +611,13 @@ function GameDetailScreen({
     }
   }, game.winner), React.createElement("div", {
     style: {
+      fontSize: '14px',
+      color: 'rgba(255,255,255,0.75)',
+      marginTop: '6px',
+      fontWeight: '800'
+    }
+  }, game.label || "Partie sans libell\xE9"), React.createElement("div", {
+    style: {
       fontSize: '12px',
       color: 'rgba(255,255,255,0.4)',
       marginTop: '4px',
@@ -887,6 +900,8 @@ function HistoryScreen({
       paddingRight: '50px'
     }
   }, React.createElement("div", null, React.createElement("div", {
+    className: "history-game-label"
+  }, game.label || "Partie sans libell\xE9"), React.createElement("div", {
     className: "history-item-title"
   }, "\uD83C\uDFC6 ", game.winner), React.createElement("div", {
     className: "history-item-date"
@@ -1271,24 +1286,9 @@ function HomeScreen({
   }, React.createElement("div", {
     className: "app-title"
   }, "M\xF6l", React.createElement("span", null, "kky")), React.createElement("div", {
-    style: {
-      display: 'flex',
-      gap: '8px'
-    }
-  }, historyCount > 0 && React.createElement("button", {
-    className: "header-btn",
-    "aria-label": `Ouvrir l'historique, ${historyCount} parties`,
-    onClick: onHistory
-  }, "\uD83D\uDCCA ", historyCount), React.createElement("button", {
-    className: "header-btn",
-    "aria-label": "Ouvrir les r\xE9glages",
-    onClick: onSettings,
-    title: "R\xE9glages",
-    style: {
-      padding: '8px 10px',
-      fontSize: '16px'
-    }
-  }, "\u2699\uFE0F"))), React.createElement("div", {
+    className: "home-header-spacer",
+    "aria-hidden": "true"
+  })), React.createElement("div", {
     className: "scroll-content"
   }, React.createElement("div", {
     className: "home-hero"
@@ -1463,7 +1463,19 @@ function HomeScreen({
     style: {
       letterSpacing: '1px'
     }
-  }, "\uD83C\uDFAF  Nouvelle Partie")));
+  }, "\uD83C\uDFAF  Nouvelle Partie"), React.createElement("div", {
+    className: "home-secondary-actions"
+  }, historyCount > 0 && React.createElement("button", {
+    type: "button",
+    className: "home-secondary-action",
+    "aria-label": `Ouvrir l'historique, ${historyCount} parties`,
+    onClick: onHistory
+  }, "Historique", React.createElement("span", null, historyCount)), React.createElement("button", {
+    type: "button",
+    className: "home-secondary-action",
+    "aria-label": "Ouvrir les r\xE9glages",
+    onClick: onSettings
+  }, "R\xE9glages"))));
 }
 function App() {
   const [screen, setScreen] = useState('home');
@@ -1471,13 +1483,14 @@ function App() {
   const [resumeState, setResumeState] = useState(null);
   const [histCount, setHistCount] = useState(() => loadHistory().length);
   const [savedGame, setSavedGame] = useState(() => loadCurrentGame());
-  function startGame(teams, targetScore, rules) {
+  function startGame(teams, targetScore, rules, gameLabel = '') {
     clearCurrentGame();
     setResumeState(null);
     setGameConfig({
       teams,
       targetScore,
-      rules
+      rules,
+      gameLabel
     });
     setScreen('game');
   }
@@ -1488,7 +1501,8 @@ function App() {
     setGameConfig({
       teams: s.teams,
       targetScore: s.targetScore,
-      rules: s.rules
+      rules: s.rules,
+      gameLabel: s.gameLabel || ''
     });
     setScreen('game');
   }

@@ -89,8 +89,14 @@ async function startGame(page, baseUrl, options = {}) {
   await page.waitForSelector('h1');
 
   await clickText(page, 'Nouvelle partie');
+  if (options.gameLabel) {
+    await page.getByLabel('Nom de la partie').fill(options.gameLabel);
+  }
   await page.getByLabel("Nom de l'équipe 1").fill('Alpha');
   await page.getByLabel("Nom de l'équipe 2").fill('Beta');
+  if (options.moveBetaFirst) {
+    await page.getByRole('button', { name: /Monter Beta/i }).click();
+  }
   if (options.targetScore) {
     await page.getByRole('button', { name: String(options.targetScore), exact: false }).click();
   }
@@ -102,6 +108,18 @@ async function startGame(page, baseUrl, options = {}) {
   }
   await page.getByRole('button', { name: /Démarrer/i }).click();
   await page.getByText('Tour de', { exact: false }).waitFor();
+}
+
+async function testSetupLabelAndTeamOrder(page, baseUrl) {
+  await startGame(page, baseUrl, {
+    gameLabel: 'Finale barbecue',
+    moveBetaFirst: true,
+  });
+
+  await page.getByText('Tour de Beta', { exact: false }).waitFor();
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('molky_current_game_v2')));
+  assert.equal(saved.gameLabel, 'Finale barbecue');
+  assert.deepEqual(saved.teams.map(team => team.name), ['Beta', 'Alpha']);
 }
 
 async function selectPin(page, pin) {
@@ -152,7 +170,7 @@ async function assertScore(page, teamName, score) {
 }
 
 async function testWinAndHistory(page, baseUrl) {
-  await startGame(page, baseUrl, { targetScore: 30 });
+  await startGame(page, baseUrl, { targetScore: 30, gameLabel: 'Match du soir' });
 
   await playSinglePin(page, 12);
   await missThrow(page);
@@ -168,6 +186,7 @@ async function testWinAndHistory(page, baseUrl) {
   await page.getByRole('button', { name: /Accueil/i }).click();
   await page.getByRole('button', { name: /Historique/i }).click();
   await page.getByText('Alpha', { exact: false }).first().waitFor();
+  await page.getByText('Match du soir', { exact: true }).waitFor();
 }
 
 async function testOverflowGraceAndPenalty(page, baseUrl) {
@@ -237,6 +256,7 @@ async function main() {
     const page = await context.newPage();
     page.setDefaultTimeout(10000);
 
+    await testSetupLabelAndTeamOrder(page, baseUrl);
     await testThrowUndoAndMiss(page, baseUrl);
     await testWinAndHistory(page, baseUrl);
     await testOverflowGraceAndPenalty(page, baseUrl);

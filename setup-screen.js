@@ -16,6 +16,7 @@ function SetupScreen({
   onBack,
   onStart
 }) {
+  const [gameLabel, setGameLabel] = useState('');
   const [teams, setTeams] = useState([{
     name: 'Équipe 1',
     color: TEAM_COLORS[0],
@@ -42,6 +43,16 @@ function SetupScreen({
   const removeTeam = i => {
     if (teams.length <= 2) return;
     setTeams(t => t.filter((_, idx) => idx !== i));
+  };
+  const moveTeam = (from, direction) => {
+    const to = from + direction;
+    if (to < 0 || to >= teams.length) return;
+    setTeams(t => {
+      const next = [...t];
+      const [team] = next.splice(from, 1);
+      next.splice(to, 0, team);
+      return next;
+    });
   };
   const updateName = (i, name) => setTeams(t => t.map((team, idx) => idx === i ? {
     ...team,
@@ -103,6 +114,20 @@ function SetupScreen({
     className: "card"
   }, React.createElement("div", {
     className: "card-title"
+  }, "\uD83C\uDFB2 Partie"), React.createElement("input", {
+    className: "input-field",
+    type: "text",
+    value: gameLabel,
+    placeholder: "Ex. Finale barbecue, manche 2...",
+    "aria-label": "Nom de la partie",
+    maxLength: 60,
+    onChange: e => setGameLabel(e.target.value)
+  }), React.createElement("div", {
+    className: "field-hint"
+  }, "Optionnel. Ce libell\xE9 sera visible dans l'historique.")), React.createElement("div", {
+    className: "card"
+  }, React.createElement("div", {
+    className: "card-title"
   }, "\uD83D\uDC65 \xC9quipes"), teams.map((team, i) => React.createElement("div", {
     key: i,
     style: {
@@ -118,14 +143,30 @@ function SetupScreen({
     style: {
       background: team.color
     }
-  }), React.createElement("input", {
+  }), React.createElement("div", {
+    className: "team-order-badge"
+  }, i + 1), React.createElement("input", {
     className: "input-field",
     type: "text",
     value: team.name,
     placeholder: `Équipe ${i + 1}`,
     "aria-label": `Nom de l'équipe ${i + 1}`,
     onChange: e => updateName(i, e.target.value)
-  }), teams.length > 2 && React.createElement("button", {
+  }), React.createElement("div", {
+    className: "team-order-controls"
+  }, React.createElement("button", {
+    type: "button",
+    className: "order-btn",
+    disabled: i === 0,
+    "aria-label": `Monter ${team.name || `l'équipe ${i + 1}`}`,
+    onClick: () => moveTeam(i, -1)
+  }, "\u2191"), React.createElement("button", {
+    type: "button",
+    className: "order-btn",
+    disabled: i === teams.length - 1,
+    "aria-label": `Descendre ${team.name || `l'équipe ${i + 1}`}`,
+    onClick: () => moveTeam(i, 1)
+  }, "\u2193")), teams.length > 2 && React.createElement("button", {
     type: "button",
     className: "remove-btn",
     "aria-label": `Supprimer ${team.name || `l'équipe ${i + 1}`}`,
@@ -357,7 +398,7 @@ function SetupScreen({
       missLimit,
       overflowGrace,
       overflowMode
-    })
+    }, gameLabel.trim())
   }, "\uD83C\uDFC1 D\xE9marrer !")));
 }
 

@@ -7,9 +7,9 @@ Il sert a deux usages :
 - aider le proprietaire du projet a se rappeler comment l'application fonctionne ;
 - permettre a une future intervention Codex de reprendre vite, sans redecouvrir toute l'architecture.
 
-Date de mise a jour du README : 2026-06-18.
-Version documentee de l'application : `V20260617_1207`.
-Derniere validation connue : `npm run build V20260617_1207`, puis `npm test`.
+Date de mise a jour du README : 2026-06-19.
+Version documentee de l'application : `V20260619_1315`.
+Derniere validation connue : `npm run build V20260619_1315`, puis `npm test`.
 
 ## Resume court
 
@@ -33,8 +33,10 @@ L'application permet de gerer une partie de Molkky depuis un navigateur ou un mo
 Fonctionnalites principales :
 
 - creer une nouvelle partie ;
+- donner un libelle optionnel a une partie ;
 - configurer 2 a 6 equipes ;
 - renommer les equipes ;
+- reordonner l'ordre de passage des equipes avant le debut ;
 - appliquer un handicap de depart par equipe ;
 - choisir un score cible : 30, 40, 50 ou 75 ;
 - activer ou desactiver l'elimination par rates ;
@@ -52,6 +54,7 @@ Fonctionnalites principales :
 - sauvegarder la partie en cours ;
 - reprendre une partie sauvegardee ;
 - conserver l'historique des parties terminees ;
+- retrouver le libelle d'une partie dans l'historique et le detail ;
 - afficher des statistiques ;
 - fonctionner offline apres mise en cache par le service worker.
 
@@ -185,7 +188,7 @@ Ces fichiers sont servis par GitHub Pages et doivent etre publies.
 La version courante est :
 
 ```text
-V20260617_1207
+V20260619_1315
 ```
 
 Elle est synchronisee dans :
@@ -208,7 +211,7 @@ npm run build VYYYYMMDD_HHMM
 Exemple :
 
 ```bash
-npm run build V20260617_1207
+npm run build V20260619_1315
 ```
 
 ## Commandes
@@ -264,6 +267,8 @@ Suites actuelles :
 Parcours fonctionnels couverts :
 
 - nouvelle partie ;
+- libelle de partie ;
+- reordonnancement des equipes avant lancement ;
 - lancer ;
 - annulation ;
 - rate ;
@@ -381,6 +386,7 @@ npm test
 | Etape 5 | Ajout de tests fonctionnels Playwright sur les parcours critiques, y compris depassement, elimination et offline. |
 | Livraison | Generation de `V20260617_1207`, verification assets, `npm test` complet OK. |
 | Carnet de bord | README promu comme documentation officielle a maintenir a chaque evolution. |
+| V20260619_1315 | Accueil plus sobre, actions historique/reglages deplacees en secondaire, libelle de partie et reordonnancement des equipes avant lancement. |
 
 ## Comment maintenir ce README
 
@@ -404,7 +410,7 @@ Les tableaux ci-dessous sont le suivi officiel.
 | Assets locaux | Ajouter React, polices, icones et manifest localement. | Fait | Haute | Necessaire pour PWA autonome. |
 | Extraction CSS | Sortir les styles de `index.html` vers `styles.css`. | Fait | Haute | Rend `index.html` maintenable. |
 | Build workflow | Ajouter `scripts/build.js` et synchroniser les fichiers generes. | Fait | Haute | Commande : `npm run build`. |
-| Version PWA | Synchroniser `APP_VERSION` entre `index.html`, `sw.js`, `src/app.js`, `app.js`. | Fait | Haute | Version actuelle `V20260617_1207`. |
+| Version PWA | Synchroniser `APP_VERSION` entre `index.html`, `sw.js`, `src/app.js`, `app.js`. | Fait | Haute | Version actuelle `V20260619_1315`. |
 | Service worker | Mettre en cache les assets locaux et permettre reload offline. | Fait | Haute | Teste via Playwright. |
 | Decoupage `rules.js` | Extraire les regles pures du Molkky. | Fait | Haute | Teste par `test:rules`. |
 | Decoupage `storage.js` | Extraire la persistance `localStorage`. | Fait | Haute | Teste par `test:storage`. |
@@ -417,8 +423,9 @@ Les tableaux ci-dessous sont le suivi officiel.
 | Tests unitaires | Couvrir helpers, regles, moteur et stockage. | Fait | Haute | 4 suites unitaires metier + encodage. |
 | Tests fonctionnels | Couvrir parcours navigateur critiques. | Fait | Haute | `test:functional`, Playwright. |
 | Test encodage | Eviter le retour de texte mojibake. | Fait | Haute | `test:encoding`. |
-| Verification assets | Verifier que les references HTML/SW existent. | Fait | Haute | Controle fait avant livraison `V20260617_1207`. |
+| Verification assets | Verifier que les references HTML/SW existent. | Fait | Haute | Controle fait avant livraison `V20260619_1315`. |
 | README carnet de bord | Documenter fonctionnement, structure, suivi et historique. | Fait | Haute | Ce fichier est la reference officielle. |
+| Accueil plus sobre | Retirer les actions historique/reglages de l'en-tete et les presenter comme actions secondaires. | Fait | Moyenne | Ajoute en `V20260619_1315`. |
 | Extraire `WinScreen` | Sortir l'ecran de victoire de `src/app.js`. | A faire | Moyenne | Utile pour reduire `app.js`, pas bloquant. |
 | Extraire historique/stats | Sortir `HistoryScreen`, `GameDetailScreen`, `PlayerStatsScreen`. | A faire | Moyenne | Bon prochain chantier structurel. |
 | Extraire settings/home | Sortir `SettingsScreen` et `HomeScreen`. | Moyen terme | Moyenne | Nettoyage de lisibilite. |
@@ -433,6 +440,8 @@ Les tableaux ci-dessous sont le suivi officiel.
 |---|---|---|---|---|
 | Nouvelle partie | Demarrer une partie depuis l'accueil. | Fait | Haute | Test fonctionnel existant. |
 | Equipes 2 a 6 | Ajouter, retirer et renommer les equipes. | Fait | Haute | Configure dans `setup-screen.js`. |
+| Libelle de partie | Nommer une partie et retrouver ce libelle dans l'historique/detail. | Fait | Moyenne | Ajoute et teste en `V20260619_1315`. |
+| Ordre de passage | Reordonner les equipes avant le lancement avec des boutons monter/descendre. | Fait | Haute | Ajoute et teste en `V20260619_1315`. |
 | Couleurs equipe | Couleurs automatiques par equipe. | Fait | Moyenne | Constantes dans `constants.js`. |
 | Handicap | Donner des points de depart a une equipe. | Fait | Moyenne | Present dans setup. |
 | Score cible | Choisir 30, 40, 50 ou 75. | Fait | Haute | 50 reste le mode officiel. |
@@ -462,4 +471,3 @@ Les tableaux ci-dessous sont le suivi officiel.
 | Export historique | Export CSV/JSON des parties. | Moyen terme | Basse | Idee future utile. |
 | Mode tournoi | Gerer plusieurs parties/classement tournoi. | Moyen terme | Basse | Nouvelle fonctionnalite importante, a cadrer. |
 | Multi-appareil temps reel | Synchroniser plusieurs telephones. | A eviter pour l'instant | Basse | Exigerait backend ou service externe. |
-

@@ -181,6 +181,40 @@ body {
   letter-spacing: 2px;
   text-transform: uppercase;
 }
+.home-header-spacer {
+  width: 44px;
+  flex-shrink: 0;
+}
+.home-secondary-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+  margin-bottom: 4px;
+}
+.home-secondary-action {
+  min-height: 42px;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.72);
+  font-family: 'Nunito', sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.home-secondary-action span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  margin-left: 6px;
+  border-radius: 999px;
+  background: rgba(200,133,74,0.22);
+  color: var(--cream);
+  font-size: 11px;
+}
 
 /* ===== FIELD DIAGRAM — pro style ===== */
 .field-diagram {
@@ -250,6 +284,40 @@ body {
   border-radius: 50%;
   flex-shrink: 0;
 }
+.team-order-badge {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: rgba(45,80,22,0.1);
+  color: var(--forest);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 900;
+}
+.team-order-controls {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.order-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(45,80,22,0.22);
+  background: rgba(45,80,22,0.06);
+  color: var(--forest);
+  font-size: 15px;
+  font-weight: 900;
+  cursor: pointer;
+  line-height: 1;
+}
+.order-btn:disabled {
+  opacity: 0.28;
+  cursor: default;
+}
 .input-field {
   flex: 1;
   padding: 10px 14px;
@@ -264,6 +332,12 @@ body {
   transition: border-color 0.2s;
 }
 .input-field:focus { border-color: var(--grass); }
+.field-hint {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  margin-top: 8px;
+}
 .remove-btn {
   width: 32px; height: 32px;
   border: none; border-radius: 50%;
@@ -564,6 +638,13 @@ body {
   font-family: 'Fredoka One', cursive;
   font-size: 16px;
   color: var(--forest);
+}
+.history-game-label {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 900;
+  margin-bottom: 2px;
+  padding-right: 8px;
 }
 .history-item-date {
   font-size: 11px;
