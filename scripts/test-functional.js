@@ -94,6 +94,13 @@ async function startGame(page, baseUrl, options = {}) {
   }
   await page.getByLabel("Nom de l'équipe 1").fill('Alpha');
   await page.getByLabel("Nom de l'équipe 2").fill('Beta');
+  if (options.extraTeams) {
+    for (let i = 0; i < options.extraTeams.length; i += 1) {
+      await page.getByRole('button', { name: /Ajouter une/i }).click();
+      const teamNumber = i + 3;
+      await page.getByLabel(new RegExp(`Nom de l'.*quipe ${teamNumber}`)).fill(options.extraTeams[i]);
+    }
+  }
   if (options.moveBetaFirst) {
     await page.getByRole('button', { name: /Monter Beta/i }).click();
   }
@@ -169,13 +176,42 @@ async function testCurrentMatchHistory(page, baseUrl) {
 
   await playSinglePin(page, 7);
   await missThrow(page);
+  await playSinglePin(page, 1);
 
   await page.getByRole('button', { name: /historique des coups/i }).click();
   await page.getByRole('dialog', { name: /Coups joués/i }).waitFor();
   await page.getByText('Round 1', { exact: true }).waitFor();
+  await page.getByText('Round 2', { exact: true }).waitFor();
+  const roundTitles = await page.locator('.match-history-round-title').allTextContents();
+  assert.deepEqual(roundTitles.map(text => text.trim()), ['Round 1', 'Round 2']);
   await page.getByText('+7', { exact: true }).waitFor();
   await page.getByText('Raté', { exact: true }).waitFor();
   await page.getByRole('button', { name: /Fermer l'historique des coups/i }).click();
+}
+
+async function testScrollableScoreboardForManyTeams(page, baseUrl) {
+  await startGame(page, baseUrl, {
+    extraTeams: ['Gamma', 'Delta', 'Epsilon'],
+  });
+
+  const metrics = await page.evaluate(() => {
+    const board = document.querySelector('.scoreboard');
+    const firstCard = document.querySelector('.team-score-card');
+    const boardRect = board.getBoundingClientRect();
+    const cardRect = firstCard.getBoundingClientRect();
+    board.scrollLeft = board.scrollWidth;
+    return {
+      clientWidth: Math.round(board.clientWidth),
+      scrollWidth: Math.round(board.scrollWidth),
+      scrolledLeft: Math.round(board.scrollLeft),
+      cardWidth: Math.round(cardRect.width),
+      boardWidth: Math.round(boardRect.width),
+    };
+  });
+
+  assert.ok(metrics.scrollWidth > metrics.clientWidth + 40, `scoreboard should scroll: ${JSON.stringify(metrics)}`);
+  assert.ok(metrics.scrolledLeft > 0, `scoreboard should accept horizontal scroll: ${JSON.stringify(metrics)}`);
+  assert.ok(metrics.cardWidth >= metrics.boardWidth * 0.42, `team cards should remain readable: ${JSON.stringify(metrics)}`);
 }
 
 async function assertScore(page, teamName, score) {
@@ -273,6 +309,7 @@ async function main() {
     await testSetupLabelAndTeamOrder(page, baseUrl);
     await testThrowUndoAndMiss(page, baseUrl);
     await testCurrentMatchHistory(page, baseUrl);
+    await testScrollableScoreboardForManyTeams(page, baseUrl);
     await testWinAndHistory(page, baseUrl);
     await testOverflowGraceAndPenalty(page, baseUrl);
     await testEliminationWin(page, baseUrl);

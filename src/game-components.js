@@ -8,22 +8,23 @@
   root.MolkkyGameComponents = gameComponents;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function (React, constants) {
   const { SORTED_PINS } = constants;
+  const { useEffect, useRef } = React;
 
   function MatchHistorySheet({
     throws,
     teams,
     onClose,
   }) {
-    const rounds = [...(throws || [])].reverse().reduce((acc, entry, index) => {
+    const rounds = (throws || []).reduce((acc, entry, index) => {
       const round = entry.roundBefore || 1;
       if (!acc[round]) acc[round] = [];
       acc[round].push({
         ...entry,
-        displayIndex: throws.length - index,
+        displayIndex: index + 1,
       });
       return acc;
     }, {});
-    const sortedRounds = Object.keys(rounds).map(Number).sort((a, b) => b - a);
+    const sortedRounds = Object.keys(rounds).map(Number).sort((a, b) => a - b);
 
     function eventLabel(entry) {
       if (entry.miss) return entry.eliminated ? 'Raté · élimination' : 'Raté';
@@ -95,18 +96,34 @@
     targetScore,
     rules,
   }) {
+    const scoreboardRef = useRef(null);
     const activeRules = rules || {
       eliminationOn: true,
       missLimit: 3,
     };
 
+    useEffect(() => {
+      const board = scoreboardRef.current;
+      if (!board) return;
+      const activeCard = board.querySelector(`[data-team-index="${currentTeamIdx}"]`);
+      if (activeCard && typeof activeCard.scrollIntoView === 'function') {
+        activeCard.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest',
+          inline: 'center',
+        });
+      }
+    }, [currentTeamIdx, teams.length]);
+
     return React.createElement("div", {
-      className: "scoreboard"
+      className: "scoreboard",
+      ref: scoreboardRef
     }, teams.map((team, i) => {
       const remaining = targetScore - team.score;
       const isPlayable = remaining > 0 && remaining <= 12;
       return React.createElement("div", {
       key: i,
+      "data-team-index": i,
       className: `team-score-card ${i === currentTeamIdx ? 'active' : ''} ${team.eliminated ? 'eliminated' : ''}`
     }, i === currentTeamIdx && React.createElement("div", {
       className: "active-arrow"

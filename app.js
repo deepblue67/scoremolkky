@@ -27,7 +27,7 @@ const {
   estimateStorageSize,
   formatStorageSize
 } = MolkkyStorage;
-const APP_VERSION = 'V20260619_2350';
+const APP_VERSION = 'V20260622_1407';
 const {
   FieldDiagram
 } = MolkkyComponents;

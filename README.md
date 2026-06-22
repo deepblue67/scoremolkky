@@ -8,8 +8,8 @@ Il sert a deux usages :
 - permettre a une future intervention Codex de reprendre vite, sans redecouvrir toute l'architecture.
 
 Date de mise a jour du README : 2026-06-19.
-Version documentee de l'application : `V20260619_2350`.
-Derniere validation connue : `npm run build V20260619_2350`, puis `npm test`.
+Version documentee de l'application : `V20260622_1407`.
+Derniere validation connue : `npm run build V20260622_1407`, puis `npm test`.
 
 ## Resume court
 
@@ -189,7 +189,7 @@ Ces fichiers sont servis par GitHub Pages et doivent etre publies.
 La version courante est :
 
 ```text
-V20260619_2350
+V20260622_1407
 ```
 
 Elle est synchronisee dans :
@@ -212,7 +212,7 @@ npm run build VYYYYMMDD_HHMM
 Exemple :
 
 ```bash
-npm run build V20260619_2350
+npm run build V20260622_1407
 ```
 
 ## Commandes
@@ -401,6 +401,7 @@ npm test
 | V20260619_2008 | Remplacement de la ligne recente par un bouton Coups joues et une bottom sheet listant les coups, rates, depassements, penalites et eliminations de la partie en cours. |
 | V20260619_2314 | Compactage mobile de l'accueil pour afficher les actions sans scroll et stabilisation de la saisie des equipes sur petits ecrans. |
 | V20260619_2350 | Nouvelle livraison cache/PWA apres ajustement CSS final, pour forcer la mise a jour du service worker. |
+| V20260622_1407 | Scoreboard de partie scrollable horizontalement avec cartes lisibles pour 3 equipes et plus ; historique des coups affiche du Round 1 vers les rounds suivants. |
 
 ## Comment maintenir ce README
 
@@ -424,7 +425,7 @@ Les tableaux ci-dessous sont le suivi officiel.
 | Assets locaux | Ajouter React, polices, icones et manifest localement. | Fait | Haute | Necessaire pour PWA autonome. |
 | Extraction CSS | Sortir les styles de `index.html` vers `styles.css`. | Fait | Haute | Rend `index.html` maintenable. |
 | Build workflow | Ajouter `scripts/build.js` et synchroniser les fichiers generes. | Fait | Haute | Commande : `npm run build`. |
-| Version PWA | Synchroniser `APP_VERSION` entre `index.html`, `sw.js`, `src/app.js`, `app.js`. | Fait | Haute | Version actuelle `V20260619_2350`. |
+| Version PWA | Synchroniser `APP_VERSION` entre `index.html`, `sw.js`, `src/app.js`, `app.js`. | Fait | Haute | Version actuelle `V20260622_1407`. |
 | Service worker | Mettre en cache les assets locaux et permettre reload offline. | Fait | Haute | Teste via Playwright. |
 | Decoupage `rules.js` | Extraire les regles pures du Molkky. | Fait | Haute | Teste par `test:rules`. |
 | Decoupage `storage.js` | Extraire la persistance `localStorage`. | Fait | Haute | Teste par `test:storage`. |
@@ -443,6 +444,7 @@ Les tableaux ci-dessous sont le suivi officiel.
 | Test mobile/accessibilite | Automatiser controles viewport mobile, focus, cibles tactiles et clavier. | Fait | Haute | Suite `test:a11y-mobile`, ajoutee en `V20260619_1819`. |
 | Ecran de jeu compact | Reequilibrer les zones de score, tour, quilles et actions sur mobile. | Fait | Haute | Grille 4x3 en portrait, ajout en `V20260619_1850`. |
 | Historique coups en cours | Remplacer la ligne recente par une vue lisible de tous les coups de la partie. | Fait | Haute | Bottom sheet `Coups joues`, ajoutee en `V20260619_2008`. |
+| Scoreboard multi-equipes | Garder des cartes lisibles et permettre le scroll horizontal quand il y a plus de 2 equipes. | Fait | Haute | Ajoute en `V20260622_1407`, test fonctionnel 5 equipes. |
 | Ergonomie mobile accueil/setup | Faire tenir les actions d'accueil sans scroll et supprimer les debordements horizontaux de configuration. | Fait | Haute | Ajoute en `V20260619_2314`. |
 | Extraire `WinScreen` | Sortir l'ecran de victoire de `src/app.js`. | A faire | Moyenne | Utile pour reduire `app.js`, pas bloquant. |
 | Extraire historique/stats | Sortir `HistoryScreen`, `GameDetailScreen`, `PlayerStatsScreen`. | A faire | Moyenne | Bon prochain chantier structurel. |
@@ -464,7 +466,7 @@ Les tableaux ci-dessous sont le suivi officiel.
 | Couleurs equipe | Couleurs automatiques par equipe. | Fait | Moyenne | Constantes dans `constants.js`. |
 | Handicap | Donner des points de depart a une equipe. | Fait | Moyenne | Present dans setup. |
 | Score cible | Choisir 30, 40, 50 ou 75. | Fait | Haute | 50 reste le mode officiel. |
-| Ecran de lancer | Mettre en valeur le joueur courant, le score, le reste et l'etat apres lancer. | Fait | Haute | Score/reste mis au meme niveau en `V20260619_1935`. |
+| Ecran de lancer | Mettre en valeur le joueur courant, le score, le reste et l'etat apres lancer. | Fait | Haute | Score/reste mis au meme niveau en `V20260619_1935`, scoreboard scrollable en `V20260622_1407`. |
 | Calcul lancer | Une quille = numero, plusieurs quilles = nombre. | Fait | Haute | Teste par `test:rules`. |
 | Lancer rate | Bouton rate, 0 point, avance au joueur suivant. | Fait | Haute | Test fonctionnel existant. |
 | Elimination par rates | Eliminer apres N rates consecutifs. | Fait | Haute | Teste en moteur et Playwright. |
@@ -481,7 +483,7 @@ Les tableaux ci-dessous sont le suivi officiel.
 | Annuler dernier lancer | Restaurer l'etat precedent complet. | Fait | Haute | Teste moteur et fonctionnel. |
 | Revanche | Relancer avec etat frais. | Fait | Haute | Corrige pendant les premieres etapes. |
 | Sauvegarde partie en cours | Reprendre apres reload. | Fait | Haute | Via `localStorage`. |
-| Historique coups en cours | Voir les coups, rates, depassements, penalites et eliminations de la partie active. | Fait | Haute | Test fonctionnel ajoute en `V20260619_2008`. |
+| Historique coups en cours | Voir les coups, rates, depassements, penalites et eliminations de la partie active. | Fait | Haute | Test fonctionnel ajoute en `V20260619_2008`, ordre chronologique des rounds en `V20260622_1407`. |
 | Historique parties | Consulter les parties terminees. | Fait | Moyenne | Test fonctionnel existant. |
 | Statistiques joueurs | Afficher stats globales par joueur/equipe. | Fait | Moyenne | Present dans l'app. |
 | Mode offline | Recharger l'app hors connexion apres cache. | Fait | Haute | Test fonctionnel existant. |
