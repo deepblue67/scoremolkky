@@ -5,7 +5,8 @@
   }
   root.MolkkyConstants = constants;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
-  const TEAM_COLORS = ['#E74C3C', '#3498DB', '#2ECC71', '#F39C12', '#9B59B6', '#1ABC9C'];
+  // Couleurs d'équipe choisies pour rester lisibles sur le fond épicéa (pas de vert).
+  const TEAM_COLORS = ['#F2654F', '#4FA6F0', '#F2C14E', '#B590F2', '#36C7BC', '#F27BB4'];
   const ACTUAL_PINS = [7, 9, 8, 10, 11, 12, 6, 5, 4, 3, 2, 1];
   const SORTED_PINS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 

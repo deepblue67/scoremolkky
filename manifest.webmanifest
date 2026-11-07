@@ -1,13 +1,13 @@
 {
-  "name": "Molkky Score",
-  "short_name": "Molkky",
+  "name": "Mölkky Score",
+  "short_name": "Mölkky",
   "description": "Application de gestion de points pour le jeu Molkky.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0f1e08",
-  "theme_color": "#2D5016",
+  "background_color": "#0F2219",
+  "theme_color": "#0F2219",
   "icons": [
     {
       "src": "./icons/icon-180.png",

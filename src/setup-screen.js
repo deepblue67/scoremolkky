@@ -9,7 +9,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function (React, constants, components, dialogs, rules) {
   const { useState, useRef } = React;
   const { TEAM_COLORS } = constants;
-  const { ChipSelect, Toggle } = components;
+  const { ChipSelect, Toggle, Icon } = components;
+  const h = React ? React.createElement : null;
   const { RulePopup } = dialogs;
   const { clampHandicap, maxHandicapFor } = rules;
 
@@ -39,26 +40,14 @@
     ruleKey,
     onOpen
   }) {
-    return React.createElement("button", {
+    return h("button", {
       type: "button",
+      className: "help-btn",
       "aria-label": "Afficher l'aide sur cette r\xE8gle",
-      onClick: () => onOpen(ruleKey),
-      style: {
-        background: 'rgba(45,80,22,0.12)',
-        border: 'none',
-        borderRadius: '50%',
-        width: '22px',
-        height: '22px',
-        cursor: 'pointer',
-        color: '#2d5016',
-        fontWeight: '900',
-        fontSize: '13px',
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexShrink: 0
-      }
-    }, "?");
+      onClick: () => onOpen(ruleKey)
+    }, h(Icon, {
+      name: "help"
+    }));
   }
 
 function SetupScreen({
@@ -128,68 +117,50 @@ function SetupScreen({
   const canStart = !hasEmptyName && duplicateNames.size === 0;
   const maxHandicap = maxHandicapFor(targetScore);
   const overflowDesc = {
-    '25': 'Retombe à 25 (règle officielle)',
-    '0': 'Retombe à 0 (mode sévère)',
-    'half': 'Retombe à la moitié du score',
-    'none': 'Rien ne se passe (mode débutant)'
+    '25': 'Le score retombe à 25. C’est la règle officielle.',
+    '0': 'Le score retombe à 0. Mode sévère.',
+    'half': 'Le score retombe à la moitié.',
+    'none': 'Le lancer est ignoré. Mode débutant.'
   };
-  return React.createElement("div", {
+  return h("div", {
     className: "screen"
-  }, popup && React.createElement(RulePopup, {
+  }, popup && h(RulePopup, {
     rule: popup,
     onClose: () => setPopup(null)
-  }), React.createElement("div", {
-    className: "app-header"
-  }, React.createElement("button", {
-    className: "header-btn",
+  }), h("div", {
+    className: "topbar"
+  }, h("button", {
+    type: "button",
+    className: "icon-btn",
     "aria-label": "Retour \xE0 l'accueil",
     onClick: onBack
-  }, "\u2190 Retour"), React.createElement("div", {
-    className: "app-title"
-  }, "Nouvelle partie"), React.createElement("div", {
-    style: {
-      width: '70px'
-    }
-  })), React.createElement("div", {
-    className: "scroll-content setup-scroll"
-  }, React.createElement("div", {
-    className: "card"
-  }, React.createElement("div", {
-    className: "card-title"
-  }, "\uD83C\uDFB2 Partie"), React.createElement("input", {
-    className: "input-field",
-    type: "text",
-    value: gameLabel,
-    placeholder: "Ex. Finale barbecue, manche 2...",
-    "aria-label": "Nom de la partie",
-    maxLength: 60,
-    onChange: e => setGameLabel(e.target.value)
-  }), React.createElement("div", {
-    className: "field-hint"
-  }, "Optionnel. Ce libell\xE9 sera visible dans l'historique.")), React.createElement("div", {
-    className: "card"
-  }, React.createElement("div", {
-    className: "card-title"
-  }, "\uD83D\uDC65 \xC9quipes"), teams.map((team, i) => React.createElement("div", {
+  }, h(Icon, {
+    name: "back",
+    size: 24
+  })), h("div", {
+    className: "topbar-title"
+  }, "Nouvelle partie"), h("span", null)), h("div", {
+    className: "scroll setup-scroll"
+  }, h("section", {
+    className: "section"
+  }, h("h2", {
+    className: "section-title"
+  }, "\xC9quipes"), h("p", {
+    className: "section-note"
+  }, "Dans l'ordre de passage. 2 \xE0 6 \xE9quipes."), h("div", {
+    className: "team-list"
+  }, teams.map((team, i) => h("div", {
     key: team.id || i,
-    className: "setup-team-row",
-    style: {
-      marginBottom: '12px'
-    }
-  }, React.createElement("div", {
-    className: "team-input-wrap",
-    style: {
-      marginBottom: '6px'
-    }
-  }, React.createElement("div", {
+    className: "team-item setup-team-row"
+  }, h("div", {
+    className: "team-line"
+  }, h("span", {
     className: "team-color-dot",
     style: {
       background: team.color
     }
-  }), React.createElement("div", {
-    className: "team-order-badge"
-  }, i + 1), React.createElement("input", {
-    className: "input-field",
+  }), h("input", {
+    className: "field",
     type: "text",
     value: team.name,
     placeholder: `Équipe ${i + 1}`,
@@ -197,118 +168,79 @@ function SetupScreen({
     "aria-invalid": duplicateNames.has(normalizeName(team.name)) || !team.name.trim(),
     maxLength: 30,
     onChange: e => updateName(i, e.target.value)
-  }), React.createElement("div", {
-    className: "team-order-controls"
-  }, React.createElement("button", {
+  }), h("div", {
+    className: "order-btns"
+  }, h("button", {
     type: "button",
     className: "order-btn",
     disabled: i === 0,
     "aria-label": `Monter ${team.name || `l'équipe ${i + 1}`}`,
     onClick: () => moveTeam(i, -1)
-  }, "\u2191"), React.createElement("button", {
+  }, h(Icon, {
+    name: "up",
+    size: 18
+  })), h("button", {
     type: "button",
     className: "order-btn",
     disabled: i === teams.length - 1,
     "aria-label": `Descendre ${team.name || `l'équipe ${i + 1}`}`,
     onClick: () => moveTeam(i, 1)
-  }, "\u2193")), teams.length > 2 && React.createElement("button", {
+  }, h(Icon, {
+    name: "down",
+    size: 18
+  }))), h("button", {
     type: "button",
     className: "remove-btn",
+    disabled: teams.length <= 2,
     "aria-label": `Supprimer ${team.name || `l'équipe ${i + 1}`}`,
     onClick: () => removeTeam(i)
-  }, "\xD7")), React.createElement("div", {
-    className: "team-handicap-row",
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '10px',
-      paddingLeft: '30px'
-    }
-  }, React.createElement("div", {
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '6px'
-    }
-  }, React.createElement("span", {
-    style: {
-      fontSize: '11px',
-      fontWeight: '800',
-      color: '#7a6a5a',
-      letterSpacing: '0.5px'
-    }
-  }, "\u2696\uFE0F Handicap"), React.createElement(HelpBtn, {
+  }, h(Icon, {
+    name: "x",
+    size: 18
+  }))), h("div", {
+    className: "team-handicap"
+  }, h("span", {
+    className: "team-handicap-label"
+  }, "Handicap", h(HelpBtn, {
     ruleKey: "handicap",
     onOpen: setPopup
-  })), React.createElement("div", {
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '6px',
-      marginLeft: 'auto'
-    }
-  }, React.createElement("button", {
+  })), h("div", {
+    className: "stepper"
+  }, h("button", {
     type: "button",
+    className: "stepper-btn",
     "aria-label": `Diminuer le handicap de ${team.name}`,
     disabled: team.handicap <= 0,
-    onClick: () => updateHandicap(i, team.handicap - 5),
-    style: {
-      width: '28px',
-      height: '28px',
-      borderRadius: '50%',
-      border: '1.5px solid rgba(45,80,22,0.25)',
-      background: 'transparent',
-      color: '#2d5016',
-      fontSize: '16px',
-      fontWeight: '900',
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      lineHeight: 1
-    }
-  }, "\u2212"), React.createElement("div", {
-    style: {
-      minWidth: '52px',
-      textAlign: 'center',
-      fontFamily: "'Fredoka One',cursive",
-      fontSize: '16px',
-      color: team.handicap > 0 ? '#2d5016' : '#bbb'
-    }
-  }, team.handicap > 0 ? `+${team.handicap} pts` : 'Aucun'), React.createElement("button", {
+    onClick: () => updateHandicap(i, team.handicap - 5)
+  }, h(Icon, {
+    name: "minus",
+    size: 18
+  })), h("span", {
+    className: `stepper-value ${team.handicap > 0 ? 'num' : 'is-zero'}`
+  }, team.handicap > 0 ? `+${team.handicap} pts` : 'Aucun'), h("button", {
     type: "button",
+    className: "stepper-btn",
     "aria-label": `Augmenter le handicap de ${team.name}`,
     disabled: team.handicap >= maxHandicap,
-    onClick: () => updateHandicap(i, team.handicap + 5),
-    style: {
-      width: '28px',
-      height: '28px',
-      borderRadius: '50%',
-      border: '1.5px solid rgba(45,80,22,0.25)',
-      background: 'transparent',
-      color: '#2d5016',
-      fontSize: '16px',
-      fontWeight: '900',
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      lineHeight: 1
-    }
-  }, "+"))))), duplicateNames.size > 0 && React.createElement("div", {
+    onClick: () => updateHandicap(i, team.handicap + 5)
+  }, h(Icon, {
+    name: "plus",
+    size: 18
+  }))))))), duplicateNames.size > 0 && h("div", {
     className: "field-error",
     role: "alert"
-  }, "Deux \xE9quipes portent le m\xEAme nom : renomme-en une pour pouvoir d\xE9marrer."), teams.length < 6 && React.createElement("button", {
-    className: "btn btn-ghost btn-sm",
-    onClick: addTeam,
-    style: {
-      marginTop: '4px'
-    }
-  }, "+ Ajouter une \xE9quipe")), React.createElement("div", {
-    className: "card"
-  }, React.createElement("div", {
-    className: "card-title"
-  }, "\uD83C\uDFAF Score cible"), React.createElement(ChipSelect, {
+  }, "Deux \xE9quipes portent le m\xEAme nom. Renomme-en une pour d\xE9marrer."), teams.length < 6 && h("button", {
+    type: "button",
+    className: "btn btn-secondary btn-block add-team",
+    onClick: addTeam
+  }, h(Icon, {
+    name: "plus"
+  }), "Ajouter une \xE9quipe")), h("section", {
+    className: "section"
+  }, h("h2", {
+    className: "section-title"
+  }, "Score cible"), h(ChipSelect, {
+    label: "Score cible",
     value: targetScore,
     onChange: setTargetScore,
     options: [{
@@ -324,116 +256,78 @@ function SetupScreen({
       value: 75,
       label: '75'
     }]
-  })), React.createElement("div", {
-    className: "card"
-  }, React.createElement("div", {
+  })), h("section", {
+    className: "section"
+  }, h("div", {
+    className: "setting-head"
+  }, h("h2", {
+    className: "section-title",
     style: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '10px',
-      marginBottom: eliminationOn ? '12px' : '0'
+      marginBottom: 0
     }
-  }, React.createElement("div", {
-    style: {
-      flex: 1
-    }
-  }, React.createElement("div", {
-    style: {
-      fontFamily: "'Fredoka One',cursive",
-      fontSize: '16px',
-      color: '#2d5016',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '6px'
-    }
-  }, "\u274C \xC9limination par rat\xE9s ", React.createElement(HelpBtn, {
+  }, "\xC9limination par rat\xE9s", h(HelpBtn, {
     ruleKey: "elimination",
     onOpen: setPopup
-  })), React.createElement("div", {
-    style: {
-      fontSize: '12px',
-      color: '#7a6a5a',
-      marginTop: '3px'
-    }
-  }, eliminationOn ? `Éliminé après ${missLimit} raté${missLimit > 1 ? 's' : ''} consécutif${missLimit > 1 ? 's' : ''}` : "Les ratés n'éliminent pas")), React.createElement(Toggle, {
+  })), h(Toggle, {
     value: eliminationOn,
     onChange: setEliminationOn,
     label: "Activer l'\xE9limination par rat\xE9s"
-  })), eliminationOn && React.createElement("div", null, React.createElement("div", {
-    style: {
-      fontSize: '12px',
-      color: '#7a6a5a',
-      marginBottom: '8px'
-    }
-  }, "Nombre de rat\xE9s avant \xE9limination :"), React.createElement(ChipSelect, {
+  })), h("p", {
+    className: "setting-desc"
+  }, eliminationOn ? `Une équipe est éliminée après ${missLimit} ratés de suite.` : "Les ratés n'éliminent personne."), eliminationOn && h(ChipSelect, {
+    label: "Nombre de rat\xE9s avant \xE9limination",
     value: missLimit,
     onChange: setMissLimit,
     options: [{
       value: 2,
-      label: '2 — Expert'
+      label: '2 (expert)'
     }, {
       value: 3,
-      label: '3 — Officiel'
+      label: '3 (officiel)'
     }, {
       value: 4,
-      label: '4 — Famille'
+      label: '4 (famille)'
     }]
-  }))), React.createElement("div", {
-    className: "card"
-  }, React.createElement("div", {
+  })), h("section", {
+    className: "section"
+  }, h("div", {
+    className: "setting-head"
+  }, h("h2", {
+    className: "section-title",
     style: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '6px',
-      marginBottom: '4px'
+      marginBottom: 0
     }
-  }, React.createElement("span", {
-    style: {
-      fontFamily: "'Fredoka One',cursive",
-      fontSize: '16px',
-      color: '#2d5016'
-    }
-  }, "\uD83D\uDCA5 D\xE9passement du score cible"), React.createElement(HelpBtn, {
+  }, "D\xE9passement de la cible", h(HelpBtn, {
     ruleKey: "overflow",
     onOpen: setPopup
-  })), React.createElement("div", {
-    style: {
-      fontSize: '12px',
-      color: '#7a6a5a',
-      marginBottom: '10px'
-    }
-  }, overflowDesc[overflowMode]), React.createElement(ChipSelect, {
+  }))), h("p", {
+    className: "setting-desc"
+  }, overflowDesc[overflowMode]), h(ChipSelect, {
+    label: "Pénalité de dépassement",
     value: overflowMode,
     onChange: setOverflowMode,
     options: [{
       value: '25',
-      label: '→ 25 pts'
+      label: 'Retombe à 25'
     }, {
       value: '0',
-      label: '→ 0 pt'
+      label: 'Retombe à 0'
     }, {
       value: 'half',
-      label: '→ Moitié'
+      label: 'Moitié'
     }, {
       value: 'none',
       label: 'Rien'
     }]
-  }), overflowMode !== 'none' && React.createElement("div", {
-    style: {
-      marginTop: '12px'
-    }
-  }, React.createElement("div", {
-    style: {
-      fontSize: '12px',
-      color: '#7a6a5a',
-      marginBottom: '8px'
-    }
-  }, "Essais de gr\xE2ce avant p\xE9nalit\xE9 :"), React.createElement(ChipSelect, {
+  }), overflowMode !== 'none' && h("div", null, h("div", {
+    className: "setting-sub"
+  }, "Essais de gr\xE2ce avant la p\xE9nalit\xE9"), h(ChipSelect, {
+    label: "Essais de gr\xE2ce",
     value: overflowGrace,
     onChange: setOverflowGrace,
     options: [{
       value: 0,
-      label: '0 — Immédiat'
+      label: 'Aucun'
     }, {
       value: 1,
       label: '+1 essai'
@@ -444,8 +338,25 @@ function SetupScreen({
       value: 3,
       label: '+3 essais'
     }]
-  }))), React.createElement("button", {
-    className: "btn btn-primary btn-full btn-lg",
+  }))), h("section", {
+    className: "section"
+  }, h("h2", {
+    className: "section-title"
+  }, "Nom de la partie"), h("input", {
+    className: "field",
+    type: "text",
+    value: gameLabel,
+    placeholder: "Facultatif, ex. Finale du barbecue",
+    "aria-label": "Nom de la partie",
+    maxLength: 60,
+    onChange: e => setGameLabel(e.target.value)
+  }), h("div", {
+    className: "field-hint"
+  }, "Il appara\xEEtra dans l'historique."))), h("div", {
+    className: "start-bar"
+  }, h("button", {
+    type: "button",
+    className: "btn btn-primary btn-block btn-lg",
     disabled: !canStart,
     onClick: () => onStart(teams, targetScore, {
       eliminationOn,
@@ -453,7 +364,7 @@ function SetupScreen({
       overflowGrace,
       overflowMode
     }, gameLabel.trim())
-  }, "\uD83C\uDFC1 D\xE9marrer !")));
+  }, "D\xE9marrer la partie")));
 }
 
   return {

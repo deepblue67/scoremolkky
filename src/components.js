@@ -5,179 +5,143 @@
   }
   root.MolkkyComponents = components;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function (React) {
-function FieldDiagram() {
-  const SLOT = 42,
-    R = 17,
-    ROW_H = 42;
-  const rows = [{
-    pins: [7, 9, 8],
-    startX: SLOT * 0.5
-  }, {
-    pins: [5, 11, 12, 6],
-    startX: 0
-  }, {
-    pins: [3, 10, 4],
-    startX: SLOT * 0.5
-  }, {
-    pins: [1, 2],
-    startX: SLOT * 1.0
-  }];
-  const totalW = 4 * SLOT,
-    totalH = rows.length * ROW_H + R * 2;
-  return React.createElement("div", {
-    className: "field-diagram"
-  }, React.createElement("div", {
-    className: "field-title"
-  }, "Disposition des quilles"), React.createElement("div", {
-    style: {
-      display: 'flex',
-      justifyContent: 'center',
-      padding: '6px 0 2px',
-      position: 'relative',
-      zIndex: 1
-    }
-  }, React.createElement("svg", {
-    viewBox: `0 0 ${totalW} ${totalH}`,
-    style: {
-      width: '100%',
-      maxWidth: '210px',
-      height: 'auto',
-      overflow: 'visible'
-    }
-  }, React.createElement("defs", null, React.createElement("radialGradient", {
-    id: "pinG",
-    cx: "38%",
-    cy: "32%",
-    r: "60%"
-  }, React.createElement("stop", {
-    offset: "0%",
-    stopColor: "#e8c98a"
-  }), React.createElement("stop", {
-    offset: "100%",
-    stopColor: "#b87d3a"
-  }))), rows.flatMap((row, ri) => row.pins.map((num, ci) => {
-    const cx = row.startX + ci * SLOT + SLOT / 2;
-    const cy = ri * ROW_H + R + 2;
-    return React.createElement("g", {
-      key: num
-    }, React.createElement("circle", {
-      cx: cx + 1,
-      cy: cy + 1.5,
-      r: R,
-      fill: "rgba(0,0,0,0.25)"
-    }), React.createElement("circle", {
-      cx: cx,
-      cy: cy,
-      r: R,
-      fill: "url(#pinG)",
-      stroke: "#8a5a22",
-      strokeWidth: 1.5
-    }), React.createElement("ellipse", {
-      cx: cx - R * 0.3,
-      cy: cy - R * 0.3,
-      rx: R * 0.28,
-      ry: R * 0.18,
-      fill: "rgba(255,255,255,0.32)",
-      transform: `rotate(-35,${cx},${cy})`
-    }), React.createElement("text", {
-      x: cx,
-      y: cy + 6,
-      textAnchor: "middle",
-      fontFamily: "'Fredoka One',cursive",
-      fontSize: num >= 10 ? 12 : 14,
-      fill: "#3a1e08",
-      fontWeight: "bold"
-    }, num));
-  })))), React.createElement("div", {
-    className: "distance-line"
-  }, "3,5 m"), React.createElement("div", {
-    className: "throwing-zone"
-  }, React.createElement("div", {
-    className: "thrower-icon"
-  }, "\uD83E\uDDD1"), React.createElement("div", {
-    className: "m\xF6lkky-icon"
-  }), React.createElement("span", {
-    style: {
-      color: 'rgba(255,255,255,0.3)',
-      fontSize: '11px',
-      fontWeight: '800',
-      letterSpacing: '1px',
-      textTransform: 'uppercase'
-    }
-  }, "Zone de lancer")));
-}
-function ChipSelect({
-  options,
-  value,
-  onChange
-}) {
-  return React.createElement("div", {
-    style: {
-      display: 'flex',
-      gap: '6px',
-      flexWrap: 'wrap'
-    }
-  }, options.map(opt => React.createElement("button", {
-    key: opt.value,
-    onClick: () => onChange(opt.value),
-    style: {
-      padding: '7px 13px',
-      borderRadius: '20px',
-      border: '2px solid',
-      borderColor: value === opt.value ? '#2d5016' : 'rgba(45,80,22,0.2)',
-      background: value === opt.value ? '#2d5016' : 'transparent',
-      color: value === opt.value ? 'white' : '#2d5016',
-      fontFamily: "'Nunito',sans-serif",
-      fontWeight: '800',
-      fontSize: '13px',
-      cursor: 'pointer',
-      transition: 'all 0.15s',
-      WebkitTapHighlightColor: 'transparent'
-    }
-  }, opt.label)));
-}
-function Toggle({
-  value,
-  onChange,
-  label = 'Activer ou désactiver'
-}) {
-  return React.createElement("button", {
-    type: "button",
-    role: "switch",
-    "aria-checked": value,
-    "aria-label": label,
-    onClick: () => onChange(!value),
-    style: {
-      width: '64px',
-      height: '44px',
-      border: 'none',
-      padding: 0,
-      borderRadius: '22px',
-      flexShrink: 0,
-      background: value ? 'linear-gradient(135deg,#4a7c2f,#2d5016)' : '#ccc',
-      position: 'relative',
-      cursor: 'pointer',
-      transition: 'background 0.25s',
-      boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.2)'
-    }
-  }, React.createElement("div", {
-    style: {
-      position: 'absolute',
-      top: '5px',
-      left: value ? '25px' : '5px',
-      width: '34px',
-      height: '34px',
-      borderRadius: '50%',
-      background: 'white',
-      transition: 'left 0.25s',
-      boxShadow: '0 2px 4px rgba(0,0,0,0.25)'
-    }
-  }));
-}
+  const h = React ? React.createElement : null;
+
+  // ── Icônes (traits 2px, couleur héritée) ─────────────────────
+  const ICON_PATHS = {
+    back: ['M15 18l-6-6 6-6'],
+    undo: ['M9 14L4 9l5-5', 'M4 9h10.5a5.5 5.5 0 0 1 0 11H11'],
+    pause: ['M8 5v14', 'M16 5v14'],
+    list: ['M9 6h12', 'M9 12h12', 'M9 18h12', 'M4 6h.01', 'M4 12h.01', 'M4 18h.01'],
+    trash: ['M3 6h18', 'M8 6V4h8v2', 'M19 6l-1 14H6L5 6', 'M10 11v6', 'M14 11v6'],
+    check: ['M20 6L9 17l-5-5'],
+    x: ['M18 6L6 18', 'M6 6l12 12'],
+    sliders: ['M4 21v-7', 'M4 10V3', 'M12 21v-9', 'M12 8V3', 'M20 21v-5', 'M20 12V3', 'M1 14h6', 'M9 8h6', 'M17 16h6'],
+    clock: ['M12 7v5l3 2', 'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z'],
+    play: ['M7 4l13 8-13 8z'],
+    trophy: ['M8 21h8', 'M12 17v4', 'M7 4h10v5a5 5 0 0 1-10 0z', 'M17 5h3v2a3 3 0 0 1-3 3', 'M7 5H4v2a3 3 0 0 0 3 3'],
+    refresh: ['M20 11a8 8 0 1 0-2.3 5.7', 'M20 4v7h-7'],
+    plus: ['M12 5v14', 'M5 12h14'],
+    minus: ['M5 12h14'],
+    up: ['M12 19V5', 'M5 12l7-7 7 7'],
+    down: ['M12 5v14', 'M19 12l-7 7-7-7'],
+    help: ['M9.5 9a2.5 2.5 0 0 1 5 .5c0 1.5-2.5 2-2.5 3.5', 'M12 17h.01', 'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z'],
+    flag: ['M5 21V4', 'M5 4h11l-2 4 2 4H5'],
+    home: ['M3 11l9-8 9 8', 'M5 9.5V21h14V9.5'],
+    chevron: ['M6 9l6 6 6-6'],
+    chart: ['M5 20v-8', 'M12 20V5', 'M19 20v-11', 'M3 20h18'],
+  };
+
+  function Icon({
+    name,
+    size = 20,
+    className = ''
+  }) {
+    const paths = ICON_PATHS[name] || [];
+    return h("svg", {
+      className: `icon ${className}`.trim(),
+      width: size,
+      height: size,
+      viewBox: "0 0 24 24",
+      fill: "none",
+      stroke: "currentColor",
+      strokeWidth: 2,
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      "aria-hidden": "true",
+      focusable: "false"
+    }, paths.map((d, i) => h("path", {
+      key: i,
+      d
+    })));
+  }
+
+  // ── Disposition officielle des quilles (vue de dessus) ───────
+  function FieldDiagram() {
+    const rows = [[7, 9, 8], [5, 11, 12, 6], [3, 10, 4], [1, 2]];
+    return h("figure", {
+      className: "formation",
+      "aria-label": "Disposition de départ des quilles"
+    }, h("div", {
+      className: "formation-pins"
+    }, rows.map((row, ri) => h("div", {
+      key: ri,
+      className: "formation-row"
+    }, row.map(num => h("span", {
+      key: num,
+      className: "wood-disc formation-pin"
+    }, num))))), h("figcaption", {
+      className: "formation-caption"
+    }, h("span", {
+      className: "formation-line",
+      "aria-hidden": "true"
+    }), h("span", null, "Lancer \xE0 3,5 m"), h("span", {
+      className: "formation-line",
+      "aria-hidden": "true"
+    })));
+  }
+
+  function ChipSelect({
+    options,
+    value,
+    onChange,
+    label
+  }) {
+    return h("div", {
+      className: "chips",
+      role: "group",
+      "aria-label": label
+    }, options.map(opt => h("button", {
+      key: opt.value,
+      type: "button",
+      className: `chip ${value === opt.value ? 'is-on' : ''}`,
+      "aria-pressed": value === opt.value,
+      onClick: () => onChange(opt.value)
+    }, opt.label)));
+  }
+
+  function Toggle({
+    value,
+    onChange,
+    label = 'Activer ou désactiver'
+  }) {
+    return h("button", {
+      type: "button",
+      role: "switch",
+      className: `switch ${value ? 'is-on' : ''}`,
+      "aria-checked": value,
+      "aria-label": label,
+      onClick: () => onChange(!value)
+    }, h("span", {
+      className: "switch-thumb"
+    }));
+  }
+
+  // Feuille modale du bas d'écran, utilisée par toutes les fenêtres.
+  function Sheet({
+    labelledBy,
+    onClose,
+    tone = '',
+    className = '',
+    children
+  }) {
+    return h("div", {
+      className: "sheet-backdrop",
+      onClick: onClose
+    }, h("div", {
+      role: "dialog",
+      "aria-modal": "true",
+      "aria-labelledby": labelledBy,
+      className: `sheet ${tone ? `sheet-${tone}` : ''} ${className}`.trim(),
+      onClick: e => e.stopPropagation()
+    }, children));
+  }
 
   return {
+    Icon,
     FieldDiagram,
     ChipSelect,
     Toggle,
+    Sheet,
   };
 });

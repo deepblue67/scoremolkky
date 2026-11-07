@@ -28,10 +28,12 @@ const {
   estimateStorageSize,
   formatStorageSize
 } = MolkkyStorage;
-const APP_VERSION = 'V20261107_1205';
+const APP_VERSION = 'V20261107_1225';
 const {
-  FieldDiagram
+  FieldDiagram,
+  Icon
 } = MolkkyComponents;
+const h = React.createElement;
 const {
   GameScoreboard,
   GameTurnPanel
@@ -137,6 +139,12 @@ function GameScreen({
     const s = stateRef.current;
     if (s.finished) return;
     const has = s.selectedPins.includes(pin);
+    // Le message du lancer précédent ne doit pas masquer l'aperçu du nouveau.
+    clearTimeout(toastTimer.current);
+    setToast(t => t.show ? {
+      ...t,
+      show: false
+    } : t);
     commit({
       ...s,
       selectedPins: has ? s.selectedPins.filter(p => p !== pin) : [...s.selectedPins, pin]
@@ -177,7 +185,7 @@ function GameScreen({
     clearPendingTimers();
     setEventPopup(null);
     commit(result.nextState);
-    showToast('↩️ Lancer annulé');
+    showToast('Lancer annulé');
   }
   function restartFresh() {
     clearPendingTimers();
@@ -237,6 +245,7 @@ function GameScreen({
     willOverflow: scorePreview.overflow,
     overflowLabel: scorePreview.label,
     displayAfter: scorePreview.displayScore,
+    targetScore: targetScore,
     throwHistory: state.throws,
     teams: state.teams,
     canUndo: throws.length > 0,
@@ -249,6 +258,58 @@ function GameScreen({
     onAbandon: () => setAbandonOpen(true)
   }));
 }
+function Topbar({
+  title,
+  onBack,
+  backLabel = 'Retour',
+  right = null
+}) {
+  return h("div", {
+    className: "topbar"
+  }, onBack ? h("button", {
+    type: "button",
+    className: "icon-btn",
+    "aria-label": backLabel,
+    onClick: onBack
+  }, h(Icon, {
+    name: "back",
+    size: 24
+  })) : h("span", null), h("div", {
+    className: "topbar-title"
+  }, title), right || h("span", null));
+}
+
+// Classement : gagnant d'abord, puis par score, les éliminées en dernier.
+function rankTeams(teams, isWinner) {
+  return teams.map((team, index) => ({
+    team,
+    index
+  })).sort((a, b) => {
+    const wa = isWinner(a.team) ? 1 : 0;
+    const wb = isWinner(b.team) ? 1 : 0;
+    if (wa !== wb) return wb - wa;
+    const ea = a.team.eliminated ? 1 : 0;
+    const eb = b.team.eliminated ? 1 : 0;
+    if (ea !== eb) return ea - eb;
+    return (b.team.score || 0) - (a.team.score || 0);
+  }).map(entry => entry.team);
+}
+
+function StatGrid({
+  items
+}) {
+  return h("div", {
+    className: "stat-grid"
+  }, items.map(item => h("div", {
+    key: item.label,
+    className: "stat"
+  }, h("div", {
+    className: "stat-value num"
+  }, item.value), h("div", {
+    className: "stat-label"
+  }, item.label))));
+}
+
 function WinScreen({
   winner,
   targetScore,
@@ -261,9 +322,10 @@ function WinScreen({
     duration,
     gameLabel
   } = winner;
-  const misses = team.history ? team.history.filter(h => h.miss).length : 0;
-  const scoring = team.history ? team.history.filter(h => !h.miss) : [];
-  const avgScore = scoring.length > 0 ? (team.totalScore / scoring.length).toFixed(1) : 0;
+  const misses = team.history ? team.history.filter(entry => entry.miss).length : 0;
+  // Même calcul que l'historique : points marqués / nombre total de lancers.
+  const avgScore = team.totalThrows > 0 ? (team.totalScore / team.totalThrows).toFixed(1).replace('.', ',') : '0';
+  const wonByElimination = team.score !== targetScore;
   useEffect(() => {
     addGameToHistory({
       id: Date.now(),
@@ -276,6 +338,7 @@ function WinScreen({
       winnerIdx: teams.findIndex(t => t === team || t.name === team.name),
       teams: teams.map(t => ({
         winner: t.name === team.name,
+        eliminated: Boolean(t.eliminated),
         name: t.name,
         color: t.color,
         score: t.score,
@@ -283,447 +346,242 @@ function WinScreen({
         totalScore: t.totalScore || 0,
         maxThrow: t.maxThrow || 0,
         overflows: t.overflows || 0,
-        misses: t.history ? t.history.filter(h => h.miss).length : 0
+        misses: t.history ? t.history.filter(entry => entry.miss).length : 0
       }))
     });
   }, []);
+  const ranked = rankTeams(teams, t => t.name === team.name);
   const stats = [{
-    icon: '🎯',
-    label: 'Score final',
-    value: `${team.score} pts`
-  }, {
-    icon: '🎳',
     label: 'Lancers',
     value: team.totalThrows || 0
   }, {
-    icon: '📊',
-    label: 'Moy/lancer',
-    value: `${avgScore} pts`
+    label: 'Moyenne',
+    value: avgScore
   }, {
-    icon: '🏅',
     label: 'Meilleur lancer',
-    value: `${team.maxThrow || 0} pts`
+    value: team.maxThrow || 0
   }, {
-    icon: '❌',
     label: 'Ratés',
     value: misses
-  }, ...(duration ? [{
-    icon: '⏱',
+  }, {
+    label: 'Dépassements',
+    value: team.overflows || 0
+  }, {
     label: 'Durée',
-    value: formatDuration(duration)
-  }] : [])];
-  return React.createElement("div", {
+    value: duration ? formatDuration(duration) : '—'
+  }];
+  return h("div", {
     className: "screen"
-  }, React.createElement("div", {
-    className: "win-screen"
-  }, React.createElement("div", {
-    className: "win-emoji"
-  }, "\uD83C\uDFC6"), React.createElement("div", {
-    className: "win-title"
-  }, "Victoire !"), React.createElement("div", {
+  }, h("div", {
+    className: "scroll"
+  }, h("div", {
+    className: "win"
+  }, h("div", null, h("div", {
+    className: "win-kicker"
+  }, h(Icon, {
+    name: "trophy",
+    size: 22
+  }), "Victoire !"), h("div", {
     className: "win-team",
     style: {
-      color: team.color
+      '--team': team.color
     }
-  }, team.name), React.createElement("div", {
-    className: "win-stats"
-  }, stats.map((s, i) => React.createElement("div", {
-    key: i,
-    className: "win-stat-row"
-  }, React.createElement("span", null, s.icon, " ", s.label), React.createElement("strong", null, s.value)))), React.createElement("div", {
+  }, team.name), h("div", {
+    className: "win-sub"
+  }, gameLabel ? `${gameLabel}, ` : '', wonByElimination ? 'par élimination des autres équipes' : `pile ${targetScore} points`)), h("ol", {
+    className: "ranking",
+    "aria-label": "Classement"
+  }, ranked.map((t, i) => h("li", {
+    key: `${t.name}-${i}`
+  }, h("span", {
+    className: "rank num"
+  }, i + 1), h("span", {
+    className: "name"
+  }, h("span", {
+    className: "dot",
     style: {
-      display: 'flex',
-      gap: '10px',
-      width: '100%',
-      maxWidth: '320px'
+      '--team': t.color
     }
-  }, React.createElement("button", {
-    className: "btn btn-ghost-dark btn-full",
+  }), h("span", null, t.name)), t.eliminated ? h("span", {
+    className: "out"
+  }, "\xE9limin\xE9e") : h("span", {
+    className: "score num"
+  }, t.score)))), h(StatGrid, {
+    items: stats
+  }), h("div", {
+    className: "win-actions"
+  }, h("button", {
+    type: "button",
+    className: "btn btn-secondary",
     onClick: onRematch
-  }, "\uD83D\uDD04 Revanche"), React.createElement("button", {
-    className: "btn btn-wood btn-full",
+  }, h(Icon, {
+    name: "refresh"
+  }), "Revanche"), h("button", {
+    type: "button",
+    className: "btn btn-primary",
     onClick: onNewGame
-  }, "\uD83C\uDFE0 Accueil"))));
+  }, h(Icon, {
+    name: "home"
+  }), "Accueil")))));
 }
+
 function PlayerStatsScreen({
   player,
   history,
   onBack
 }) {
   const games = history.filter(g => (g.teams || []).some(t => t.name === player.name));
-  const wins = games.filter(g => g.winner === player.name).length;
   const records = games.map(g => ({
     game: g,
     team: (g.teams || []).find(t => t.name === player.name)
   })).filter(r => r.team);
+  const wins = records.filter(r => isTeamWinner(r.game, r.team)).length;
   const totalThrows = records.reduce((a, r) => a + (r.team.totalThrows || 0), 0);
   const totalScore = records.reduce((a, r) => a + (r.team.totalScore || 0), 0);
   const maxThrow = Math.max(...records.map(r => r.team.maxThrow || 0), 0);
   const totalMisses = records.reduce((a, r) => a + (r.team.misses || 0), 0);
   const totalOverflows = records.reduce((a, r) => a + (r.team.overflows || 0), 0);
-  const avgScore = totalThrows > 0 ? (totalScore / totalThrows).toFixed(2) : '—';
+  const avgScore = totalThrows > 0 ? (totalScore / totalThrows).toFixed(1).replace('.', ',') : '—';
   const winStreak = (() => {
-    let c = 0,
-      m = 0;
-    games.forEach(g => {
-      if (g.winner === player.name) {
-        c++;
-        m = Math.max(m, c);
-      } else c = 0;
+    let current = 0;
+    let best = 0;
+    records.forEach(r => {
+      if (isTeamWinner(r.game, r.team)) {
+        current += 1;
+        best = Math.max(best, current);
+      } else current = 0;
     });
-    return m;
+    return best;
   })();
   const winPct = games.length ? Math.round(wins / games.length * 100) : 0;
-  const statItems = [{
-    icon: '🎳',
-    label: 'Lancers',
-    value: totalThrows
-  }, {
-    icon: '📊',
-    label: 'Moy/lancer',
-    value: avgScore
-  }, {
-    icon: '🏅',
-    label: 'Record',
-    value: maxThrow || '—'
-  }, {
-    icon: '❌',
-    label: 'Ratés',
-    value: totalMisses
-  }, {
-    icon: '💥',
-    label: 'Dépassements',
-    value: totalOverflows
-  }, {
-    icon: '🔥',
-    label: 'Série max',
-    value: `${winStreak}v`
-  }];
-  return React.createElement("div", {
+  return h("div", {
     className: "screen"
-  }, React.createElement("div", {
-    className: "app-header"
-  }, React.createElement("button", {
-    className: "header-btn",
-    onClick: onBack
-  }, "\u2190 Retour"), React.createElement("div", {
-    className: "app-title"
-  }, player.name), React.createElement("div", {
+  }, h(Topbar, {
+    title: player.name,
+    onBack
+  }), h("div", {
+    className: "scroll"
+  }, h("section", {
+    className: "section",
     style: {
-      width: '60px'
+      '--team': player.color
     }
-  })), React.createElement("div", {
-    className: "scroll-content"
-  }, React.createElement("div", {
+  }, h("div", {
+    className: "big-rate num"
+  }, winPct, " %"), h("div", {
+    className: "detail-sub"
+  }, "de victoires, ", wins, " sur ", games.length, " partie", games.length > 1 ? 's' : ''), h("div", {
+    className: "bar"
+  }, h("span", {
     style: {
-      textAlign: 'center',
-      padding: '16px 0 24px'
-    }
-  }, React.createElement("div", {
-    style: {
-      width: 64,
-      height: 64,
-      borderRadius: '50%',
-      background: `linear-gradient(135deg,${player.color},${player.color}88)`,
-      margin: '0 auto 12px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontSize: '28px',
-      boxShadow: `0 0 0 3px ${player.color}44`
-    }
-  }, "\uD83C\uDFB3"), React.createElement("div", {
-    style: {
-      fontFamily: "'Fredoka One',cursive",
-      fontSize: '26px',
-      color: '#fff'
-    }
-  }, player.name), React.createElement("div", {
-    style: {
-      fontSize: '13px',
-      color: 'rgba(255,255,255,0.4)',
-      marginTop: '4px',
-      fontWeight: '700'
-    }
-  }, games.length, " partie", games.length > 1 ? 's' : '', " \xB7 ", wins, " victoire", wins > 1 ? 's' : '')), React.createElement("div", {
-    style: {
-      background: `linear-gradient(135deg,${player.color}22,${player.color}11)`,
-      border: `1px solid ${player.color}44`,
-      borderRadius: '18px',
-      padding: '20px',
-      marginBottom: '14px',
-      textAlign: 'center'
-    }
-  }, React.createElement("div", {
-    style: {
-      fontFamily: "'Fredoka One',cursive",
-      fontSize: '52px',
-      color: player.color,
-      lineHeight: 1
-    }
-  }, winPct, "%"), React.createElement("div", {
-    style: {
-      fontSize: '12px',
-      color: 'rgba(255,255,255,0.5)',
-      fontWeight: '700',
-      letterSpacing: '1px',
-      textTransform: 'uppercase',
-      marginTop: '6px'
-    }
-  }, "Taux de victoire"), React.createElement("div", {
-    style: {
-      background: 'rgba(255,255,255,0.08)',
-      borderRadius: '4px',
-      height: '8px',
-      marginTop: '14px',
-      overflow: 'hidden'
-    }
-  }, React.createElement("div", {
-    style: {
-      height: '100%',
-      borderRadius: '4px',
-      background: `linear-gradient(90deg,${player.color},${player.color}88)`,
       width: `${winPct}%`
     }
-  }))), React.createElement("div", {
-    style: {
-      display: 'grid',
-      gridTemplateColumns: '1fr 1fr 1fr',
-      gap: '8px',
-      marginBottom: '14px'
-    }
-  }, statItems.map((s, i) => React.createElement("div", {
-    key: i,
-    style: {
-      background: 'rgba(255,255,255,0.05)',
-      border: '1px solid rgba(255,255,255,0.08)',
-      borderRadius: '12px',
-      padding: '12px 8px',
-      textAlign: 'center'
-    }
-  }, React.createElement("div", {
-    style: {
-      fontSize: '20px',
-      marginBottom: '4px'
-    }
-  }, s.icon), React.createElement("div", {
-    style: {
-      fontFamily: "'Fredoka One',cursive",
-      fontSize: '18px',
-      color: '#fff'
-    }
-  }, s.value), React.createElement("div", {
-    style: {
-      fontSize: '10px',
-      color: 'rgba(255,255,255,0.35)',
-      marginTop: '2px',
-      fontWeight: '700'
-    }
-  }, s.label)))), React.createElement("div", {
-    style: {
-      fontSize: '11px',
-      color: 'rgba(255,255,255,0.3)',
-      fontWeight: '800',
-      letterSpacing: '1.5px',
-      textTransform: 'uppercase',
-      marginBottom: '12px'
-    }
-  }, "Historique des parties"), records.map(({
+  }))), h("section", {
+    className: "section"
+  }, h(StatGrid, {
+    items: [{
+      label: 'Lancers',
+      value: totalThrows
+    }, {
+      label: 'Moyenne',
+      value: avgScore
+    }, {
+      label: 'Record',
+      value: maxThrow || '—'
+    }, {
+      label: 'Ratés',
+      value: totalMisses
+    }, {
+      label: 'Dépassements',
+      value: totalOverflows
+    }, {
+      label: 'Série de victoires',
+      value: winStreak
+    }]
+  })), h("section", {
+    className: "section"
+  }, h("h2", {
+    className: "section-title"
+  }, "Parties"), records.map(({
     game,
     team
-  }, i) => React.createElement("div", {
+  }, i) => h("div", {
     key: i,
+    className: "row"
+  }, h("div", null, h("div", {
+    className: "row-label"
+  }, isTeamWinner(game, team) ? 'Victoire' : 'Défaite', game.label ? ` · ${game.label}` : ''), h("div", {
+    className: "row-sub"
+  }, formatDate(game.date), " \xB7 ", team.totalThrows || 0, " lancers")), h("div", {
+    className: "num",
     style: {
-      background: game.winner === player.name ? `${player.color}15` : 'rgba(255,255,255,0.03)',
-      border: `1px solid ${game.winner === player.name ? player.color + '44' : 'rgba(255,255,255,0.07)'}`,
-      borderRadius: '12px',
-      padding: '12px 14px',
-      marginBottom: '8px',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '12px'
+      fontSize: '26px',
+      fontWeight: 600
     }
-  }, React.createElement("div", {
-    style: {
-      fontSize: '20px'
-    }
-  }, game.winner === player.name ? '🏆' : '—'), React.createElement("div", {
-    style: {
-      flex: 1
-    }
-  }, React.createElement("div", {
-    style: {
-      fontSize: '12px',
-      color: 'rgba(255,255,255,0.5)',
-      fontWeight: '700'
-    }
-  }, formatDate(game.date)), React.createElement("div", {
-    style: {
-      fontSize: '11px',
-      color: 'rgba(255,255,255,0.3)',
-      marginTop: '2px'
-    }
-  }, team.totalThrows || 0, " lancers \xB7 moy ", team.totalThrows > 0 ? (team.totalScore / team.totalThrows).toFixed(1) : '—')), React.createElement("div", {
-    style: {
-      textAlign: 'right'
-    }
-  }, React.createElement("div", {
-    style: {
-      fontFamily: "'Fredoka One',cursive",
-      fontSize: '22px',
-      color: game.winner === player.name ? player.color : 'rgba(255,255,255,0.5)'
-    }
-  }, team.score), React.createElement("div", {
-    style: {
-      fontSize: '9px',
-      color: 'rgba(255,255,255,0.25)',
-      fontWeight: '700'
-    }
-  }, "pts"))))));
+  }, team.score))))));
 }
+
 function GameDetailScreen({
   game,
   onBack
 }) {
-  const sorted = [...(game.teams || [])].sort((a, b) => b.score - a.score);
-  return React.createElement("div", {
+  const ranked = rankTeams(game.teams || [], t => isTeamWinner(game, t));
+  return h("div", {
     className: "screen"
-  }, React.createElement("div", {
-    className: "app-header"
-  }, React.createElement("button", {
-    className: "header-btn",
-    onClick: onBack
-  }, "\u2190 Retour"), React.createElement("div", {
-    className: "app-title"
-  }, "D\xE9tail partie"), React.createElement("div", {
-    style: {
-      width: '60px'
-    }
-  })), React.createElement("div", {
-    className: "scroll-content"
-  }, React.createElement("div", {
-    style: {
-      textAlign: 'center',
-      padding: '12px 0 20px'
-    }
-  }, React.createElement("div", {
-    style: {
-      fontSize: '40px',
-      marginBottom: '8px'
-    }
-  }, "\uD83C\uDFC6"), React.createElement("div", {
-    style: {
-      fontFamily: "'Fredoka One',cursive",
-      fontSize: '24px',
-      color: '#c8854a'
-    }
-  }, game.winner), React.createElement("div", {
-    style: {
-      fontSize: '14px',
-      color: 'rgba(255,255,255,0.75)',
-      marginTop: '6px',
-      fontWeight: '800'
-    }
-  }, game.label || "Partie sans libell\xE9"), React.createElement("div", {
-    style: {
-      fontSize: '12px',
-      color: 'rgba(255,255,255,0.4)',
-      marginTop: '4px',
-      fontWeight: '700'
-    }
-  }, formatDate(game.date), game.duration ? ` · ${formatDuration(game.duration)}` : '')), sorted.map((t, i) => {
+  }, h(Topbar, {
+    title: "D\xE9tail de la partie",
+    onBack
+  }), h("div", {
+    className: "scroll"
+  }, h("div", {
+    className: "detail-head"
+  }, h("div", {
+    className: "detail-title"
+  }, game.label || 'Partie sans nom'), h("div", {
+    className: "detail-sub"
+  }, formatDate(game.date), game.duration ? ` · ${formatDuration(game.duration)}` : '', game.targetScore ? ` · cible ${game.targetScore}` : '')), ranked.map((t, i) => {
     const isWinner = isTeamWinner(game, t);
-    const statItems = [{
-      l: 'Lancers',
-      v: t.totalThrows || '—'
-    }, {
-      l: 'Moy/lancer',
-      v: t.totalThrows > 0 ? (t.totalScore / t.totalThrows).toFixed(1) : '—'
-    }, {
-      l: 'Record',
-      v: t.maxThrow || '—'
-    }, {
-      l: 'Ratés',
-      v: t.misses !== undefined ? t.misses : '—'
-    }, {
-      l: 'Débordements',
-      v: t.overflows !== undefined ? t.overflows : '—'
-    }, {
-      l: 'Résultat',
-      v: isWinner ? '🥇' : '—'
-    }];
-    return React.createElement("div", {
+    return h("div", {
       key: i,
+      className: `detail-team ${isWinner ? 'is-winner' : ''}`,
       style: {
-        background: 'rgba(255,255,255,0.03)',
-        border: `1.5px solid ${t.color}55`,
-        borderRadius: '16px',
-        padding: '16px',
-        marginBottom: '10px'
+        '--team': t.color
       }
-    }, React.createElement("div", {
-      style: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '12px'
-      }
-    }, React.createElement("div", {
-      style: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px'
-      }
-    }, React.createElement("div", {
-      style: {
-        width: 10,
-        height: 10,
-        borderRadius: '50%',
-        background: t.color,
-        flexShrink: 0
-      }
-    }), React.createElement("div", {
-      style: {
-        fontFamily: "'Fredoka One',cursive",
-        fontSize: '18px',
-        color: isWinner ? t.color : 'rgba(255,255,255,0.8)'
-      }
-    }, isWinner ? '👑 ' : '', t.name)), React.createElement("div", {
-      style: {
-        fontFamily: "'Fredoka One',cursive",
-        fontSize: '28px',
-        color: isWinner ? t.color : 'rgba(255,255,255,0.6)'
-      }
-    }, t.score)), React.createElement("div", {
-      style: {
-        display: 'grid',
-        gridTemplateColumns: 'repeat(3,1fr)',
-        gap: '6px'
-      }
-    }, statItems.map((s, j) => React.createElement("div", {
-      key: j,
-      style: {
-        background: 'rgba(255,255,255,0.05)',
-        borderRadius: '8px',
-        padding: '7px 6px',
-        textAlign: 'center'
-      }
-    }, React.createElement("div", {
-      style: {
-        fontWeight: '800',
-        fontSize: '15px',
-        color: 'rgba(255,255,255,0.85)'
-      }
-    }, s.v), React.createElement("div", {
-      style: {
-        fontSize: '9px',
-        color: 'rgba(255,255,255,0.3)',
-        marginTop: '2px',
-        fontWeight: '700'
-      }
-    }, s.l)))));
+    }, h("div", {
+      className: "detail-team-head"
+    }, h("span", {
+      className: "name"
+    }, h("span", {
+      className: "dot"
+    }), t.name, isWinner && h(Icon, {
+      name: "trophy",
+      size: 18
+    })), h("span", {
+      className: "num"
+    }, t.score)), h(StatGrid, {
+      items: [{
+        label: 'Lancers',
+        value: t.totalThrows || '—'
+      }, {
+        label: 'Moyenne',
+        value: t.totalThrows > 0 ? (t.totalScore / t.totalThrows).toFixed(1).replace('.', ',') : '—'
+      }, {
+        label: 'Record',
+        value: t.maxThrow || '—'
+      }, {
+        label: 'Ratés',
+        value: t.misses !== undefined ? t.misses : '—'
+      }, {
+        label: 'Dépassements',
+        value: t.overflows !== undefined ? t.overflows : '—'
+      }, {
+        label: 'Résultat',
+        value: isWinner ? '1er' : t.eliminated ? 'éliminée' : `${i + 1}e`
+      }]
+    }));
   })));
 }
+
 function HistoryScreen({
   onBack
 }) {
@@ -733,9 +591,10 @@ function HistoryScreen({
   const [statPlayer, setStatPlayer] = useState(null);
   function deleteGame(id, e) {
     e.stopPropagation();
-    const h = history.filter(g => g.id !== id);
-    saveHistory(h);
-    setHistory(h);
+    if (!window.confirm('Supprimer cette partie de l’historique ?')) return;
+    const next = history.filter(g => g.id !== id);
+    saveHistory(next);
+    setHistory(next);
   }
   function clearAll() {
     if (window.confirm("Effacer tout l'historique ?")) {
@@ -769,389 +628,160 @@ function HistoryScreen({
           games: 0,
           wins: 0,
           totalThrows: 0,
-          totalScore: 0,
-          maxThrow: 0,
-          overflows: 0,
-          misses: 0
+          totalScore: 0
         };
         const p = ps[t.name];
         p.games++;
         if (isTeamWinner(g, t)) p.wins++;
         p.totalThrows += t.totalThrows || 0;
         p.totalScore += t.totalScore || 0;
-        p.maxThrow = Math.max(p.maxThrow, t.maxThrow || 0);
-        p.overflows += t.overflows || 0;
-        p.misses += t.misses || 0;
       });
     });
     return {
       topWinner,
       avgDuration,
       longestGame,
-      playerStats: Object.values(ps).sort((a, b) => b.wins - a.wins),
+      playerStats: Object.values(ps).sort((a, b) => b.wins - a.wins || b.wins / b.games - a.wins / a.games),
       total: history.length
     };
   }, [history]);
-  if (selected) return React.createElement(GameDetailScreen, {
+  if (selected) return h(GameDetailScreen, {
     game: selected,
     onBack: () => setSelected(null)
   });
-  if (statPlayer) return React.createElement(PlayerStatsScreen, {
+  if (statPlayer) return h(PlayerStatsScreen, {
     player: statPlayer,
     history: history,
     onBack: () => setStatPlayer(null)
   });
-  const tabStyle = t => ({
-    flex: 1,
-    border: 'none',
-    borderRadius: '8px',
-    padding: '9px 0',
-    fontFamily: "'Nunito',sans-serif",
-    fontWeight: '800',
-    fontSize: '13px',
-    cursor: 'pointer',
-    background: tab === t ? 'rgba(255,255,255,0.12)' : 'transparent',
-    color: tab === t ? '#fff' : 'rgba(255,255,255,0.4)',
-    transition: 'all 0.2s'
-  });
-  return React.createElement("div", {
+  return h("div", {
     className: "screen"
-  }, React.createElement("div", {
-    className: "app-header"
-  }, React.createElement("button", {
-    className: "header-btn",
-    onClick: onBack
-  }, "\u2190 Retour"), React.createElement("div", {
-    className: "app-title"
-  }, tab === 'parties' ? 'Historique' : 'Statistiques'), history.length > 0 && tab === 'parties' ? React.createElement("button", {
-    className: "header-btn",
-    "aria-label": "Effacer tout l'historique",
-    onClick: clearAll,
-    style: {
-      color: '#e74c3c'
-    }
-  }, "\uD83D\uDDD1 Tout") : React.createElement("div", {
-    style: {
-      width: '60px'
-    }
-  })), React.createElement("div", {
-    style: {
-      display: 'flex',
-      background: 'rgba(0,0,0,0.25)',
-      padding: '6px 12px',
-      gap: '6px',
-      flexShrink: 0,
-      borderBottom: '1px solid rgba(255,255,255,0.06)'
-    }
-  }, React.createElement("button", {
-    style: tabStyle('parties'),
-    "aria-pressed": tab === 'parties',
+  }, h(Topbar, {
+    title: tab === 'parties' ? 'Historique' : 'Statistiques',
+    onBack,
+    right: history.length > 0 && tab === 'parties' ? h("button", {
+      type: "button",
+      className: "icon-btn is-danger",
+      "aria-label": "Effacer tout l'historique",
+      onClick: clearAll
+    }, h(Icon, {
+      name: "trash"
+    })) : null
+  }), h("div", {
+    className: "tabs",
+    role: "tablist"
+  }, h("button", {
+    type: "button",
+    role: "tab",
+    className: `tab ${tab === 'parties' ? 'is-on' : ''}`,
+    "aria-selected": tab === 'parties',
     onClick: () => setTab('parties')
-  }, "\uD83C\uDFB3 Parties"), React.createElement("button", {
-    style: tabStyle('stats'),
-    "aria-pressed": tab === 'stats',
+  }, "Parties"), h("button", {
+    type: "button",
+    role: "tab",
+    className: `tab ${tab === 'stats' ? 'is-on' : ''}`,
+    "aria-selected": tab === 'stats',
     onClick: () => setTab('stats')
-  }, "\uD83D\uDCCA Statistiques")), React.createElement("div", {
-    className: "scroll-content"
-  }, history.length === 0 ? React.createElement("div", {
-    style: {
-      textAlign: 'center',
-      color: 'rgba(255,255,255,0.35)',
-      marginTop: '80px'
-    }
-  }, React.createElement("div", {
-    style: {
-      fontSize: '56px',
-      marginBottom: '14px'
-    }
-  }, "\uD83D\uDCED"), React.createElement("p", {
-    style: {
-      fontSize: '16px',
-      fontWeight: '700'
-    }
-  }, "Aucune partie jou\xE9e"), React.createElement("p", {
-    style: {
-      fontSize: '13px',
-      marginTop: '6px',
-      opacity: 0.6
-    }
-  }, "Tes parties appara\xEEtront ici")) : tab === 'parties' ? React.createElement("div", null, React.createElement("div", {
-    style: {
-      fontSize: '11px',
-      color: 'rgba(255,255,255,0.3)',
-      fontWeight: '800',
-      letterSpacing: '1.5px',
-      textTransform: 'uppercase',
-      marginBottom: '12px'
-    }
-  }, history.length, " partie", history.length > 1 ? 's' : '', " enregistr\xE9e", history.length > 1 ? 's' : ''), history.map(game => React.createElement("div", {
+  }, "Statistiques")), h("div", {
+    className: "scroll"
+  }, history.length === 0 ? h("div", {
+    className: "empty"
+  }, h("strong", null, "Aucune partie termin\xE9e"), "Les parties gagn\xE9es apparaissent ici.") : tab === 'parties' ? h("div", null, h("div", {
+    className: "list-count"
+  }, history.length, " partie", history.length > 1 ? 's' : '', " termin\xE9e", history.length > 1 ? 's' : ''), history.map(game => h("div", {
     key: game.id,
     className: "history-item",
     role: "button",
     tabIndex: 0,
-    "aria-label": `${game.label || 'Partie sans libell\xE9'}, gagn\xE9e par ${game.winner}`,
+    "aria-label": `${game.label || 'Partie sans nom'}, gagnée par ${game.winner}`,
     onClick: () => setSelected(game),
-    onKeyDown: event => openGameWithKeyboard(game, event),
-    style: {
-      cursor: 'pointer',
-      position: 'relative'
-    }
-  }, React.createElement("button", {
-    "aria-label": `Supprimer la partie gagnée par ${game.winner}`,
-    onClick: e => deleteGame(game.id, e),
-    style: {
-      position: 'absolute',
-      top: '10px',
-      right: '10px',
-      background: 'rgba(231,76,60,0.1)',
-      border: '1px solid rgba(231,76,60,0.2)',
-      borderRadius: '6px',
-      padding: '3px 8px',
-      fontSize: '11px',
-      color: '#e74c3c',
-      cursor: 'pointer',
-      fontWeight: '800'
-    }
-  }, "\uD83D\uDDD1"), React.createElement("div", {
-    className: "history-item-header",
-    style: {
-      paddingRight: '50px'
-    }
-  }, React.createElement("div", null, React.createElement("div", {
+    onKeyDown: event => openGameWithKeyboard(game, event)
+  }, h("div", {
     className: "history-game-label"
-  }, game.label || "Partie sans libell\xE9"), React.createElement("div", {
-    className: "history-item-title"
-  }, "\uD83C\uDFC6 ", game.winner), React.createElement("div", {
+  }, game.label || 'Partie sans nom'), h("div", {
     className: "history-item-date"
-  }, formatDate(game.date))), game.duration > 0 && React.createElement("div", {
-    style: {
-      fontSize: '11px',
-      color: '#a07050',
-      fontWeight: '700'
-    }
-  }, "\u23F1 ", formatDuration(game.duration))), React.createElement("div", {
+  }, formatDate(game.date), game.duration > 0 ? ` · ${formatDuration(game.duration)}` : ''), h("div", {
     className: "history-item-teams"
-  }, (game.teams || []).map((t, i) => React.createElement("span", {
+  }, rankTeams(game.teams || [], t => isTeamWinner(game, t)).map((t, i) => h("span", {
     key: i,
-    className: "history-team-pill",
+    className: `history-team-pill ${isTeamWinner(game, t) ? 'is-winner' : ''}`
+  }, h("span", {
+    className: "dot",
     style: {
-      background: isTeamWinner(game, t) ? t.color : t.color + '22',
-      color: isTeamWinner(game, t) ? '#fff' : t.color,
-      border: `2px solid ${t.color}`
+      '--team': t.color
     }
-  }, isTeamWinner(game, t) ? '👑 ' : '', t.name, " : ", t.score))), React.createElement("div", {
-    style: {
-      fontSize: '11px',
-      color: '#a07050',
-      marginTop: '6px',
-      fontWeight: '700'
-    }
-  }, "\u2192 Voir le d\xE9tail complet")))) : globalStats ? React.createElement("div", null, React.createElement("div", {
-    style: {
-      fontSize: '11px',
-      color: 'rgba(255,255,255,0.3)',
-      fontWeight: '800',
-      letterSpacing: '1.5px',
-      textTransform: 'uppercase',
-      marginBottom: '12px'
-    }
-  }, "R\xE9sum\xE9 global"), React.createElement("div", {
-    style: {
-      display: 'grid',
-      gridTemplateColumns: '1fr 1fr',
-      gap: '8px',
-      marginBottom: '18px'
-    }
+  }), t.name, h("span", {
+    className: "num"
+  }, t.score), isTeamWinner(game, t) && h(Icon, {
+    name: "trophy",
+    size: 16
+  })))), h("button", {
+    type: "button",
+    className: "history-delete",
+    "aria-label": `Supprimer la partie gagnée par ${game.winner}`,
+    onClick: e => deleteGame(game.id, e)
+  }, h(Icon, {
+    name: "trash",
+    size: 18
+  }))))) : globalStats ? h("div", null, h("div", {
+    className: "summary-grid"
   }, [{
-    icon: '🎳',
     label: 'Parties jouées',
     value: globalStats.total
   }, {
-    icon: '🏆',
-    label: 'Champion',
+    label: 'Le plus de victoires',
     value: globalStats.topWinner ? globalStats.topWinner[0] : '—'
   }, {
-    icon: '⏱',
     label: 'Durée moyenne',
     value: formatDuration(globalStats.avgDuration)
   }, {
-    icon: '⏳',
     label: 'Partie la plus longue',
     value: formatDuration(globalStats.longestGame)
-  }].map((s, i) => React.createElement("div", {
-    key: i,
-    style: {
-      background: 'rgba(255,255,255,0.05)',
-      border: '1px solid rgba(255,255,255,0.08)',
-      borderRadius: '14px',
-      padding: '14px 12px',
-      textAlign: 'center'
-    }
-  }, React.createElement("div", {
-    style: {
-      fontSize: '24px',
-      marginBottom: '4px'
-    }
-  }, s.icon), React.createElement("div", {
-    style: {
-      fontFamily: "'Fredoka One',cursive",
-      fontSize: '17px',
-      color: '#fff',
-      lineHeight: 1.2,
-      wordBreak: 'break-word'
-    }
-  }, s.value), React.createElement("div", {
-    style: {
-      fontSize: '10px',
-      color: 'rgba(255,255,255,0.4)',
-      marginTop: '4px',
-      fontWeight: '700',
-      letterSpacing: '0.5px'
-    }
-  }, s.label)))), React.createElement("div", {
-    style: {
-      fontSize: '11px',
-      color: 'rgba(255,255,255,0.3)',
-      fontWeight: '800',
-      letterSpacing: '1.5px',
-      textTransform: 'uppercase',
-      marginBottom: '12px'
-    }
-  }, "Classement des joueurs"), globalStats.playerStats.map((p, rank) => React.createElement("div", {
+  }].map(s => h("div", {
+    key: s.label,
+    className: "summary"
+  }, h("div", {
+    className: "summary-value num"
+  }, s.value), h("div", {
+    className: "summary-label"
+  }, s.label)))), h("h2", {
+    className: "section-title"
+  }, "Classement"), globalStats.playerStats.map((p, rank) => h("button", {
     key: p.name,
+    type: "button",
+    className: "player-row",
+    "aria-label": `Statistiques de ${p.name}`,
     onClick: () => setStatPlayer(p),
     style: {
-      background: 'rgba(255,255,255,0.04)',
-      border: `1px solid ${p.color}33`,
-      borderRadius: '14px',
-      padding: '14px',
-      marginBottom: '8px',
-      cursor: 'pointer'
+      '--team': p.color
     }
-  }, React.createElement("div", {
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '10px',
-      marginBottom: '10px'
-    }
-  }, React.createElement("div", {
-    style: {
-      width: '28px',
-      height: '28px',
-      borderRadius: '50%',
-      background: rank === 0 ? 'linear-gradient(135deg,#f9d423,#c8854a)' : rank === 1 ? 'linear-gradient(135deg,#c0c0c0,#909090)' : 'linear-gradient(135deg,#cd7f32,#8b4513)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontSize: '14px',
-      color: '#fff',
-      flexShrink: 0
-    }
-  }, rank === 0 ? '🥇' : rank === 1 ? '🥈' : '🥉'), React.createElement("div", {
-    style: {
-      flex: 1
-    }
-  }, React.createElement("div", {
-    style: {
-      fontWeight: '900',
-      fontSize: '16px',
-      color: '#fff'
-    }
-  }, p.name), React.createElement("div", {
-    style: {
-      fontSize: '11px',
-      color: 'rgba(255,255,255,0.4)',
-      marginTop: '2px'
-    }
-  }, p.games, " partie", p.games > 1 ? 's' : '')), React.createElement("div", {
-    style: {
-      textAlign: 'right'
-    }
-  }, React.createElement("div", {
-    style: {
-      fontFamily: "'Fredoka One',cursive",
-      fontSize: '20px',
-      color: p.color
-    }
-  }, p.wins, "v"), React.createElement("div", {
-    style: {
-      fontSize: '10px',
-      color: 'rgba(255,255,255,0.35)',
-      fontWeight: '700'
-    }
-  }, Math.round(p.wins / p.games * 100), "% win"))), React.createElement("div", {
-    style: {
-      background: 'rgba(255,255,255,0.08)',
-      borderRadius: '4px',
-      height: '6px',
-      overflow: 'hidden',
-      marginBottom: '8px'
-    }
-  }, React.createElement("div", {
-    style: {
-      height: '100%',
-      borderRadius: '4px',
-      background: `linear-gradient(90deg,${p.color},${p.color}88)`,
-      width: `${Math.round(p.wins / p.games * 100)}%`
-    }
-  })), React.createElement("div", {
-    style: {
-      display: 'grid',
-      gridTemplateColumns: 'repeat(4,1fr)',
-      gap: '4px'
-    }
-  }, [{
-    l: 'Lancers',
-    v: p.totalThrows
-  }, {
-    l: 'Moy/lancer',
-    v: p.totalThrows > 0 ? (p.totalScore / p.totalThrows).toFixed(1) : '—'
-  }, {
-    l: 'Record',
-    v: p.maxThrow || '—'
-  }, {
-    l: 'Ratés',
-    v: p.misses
-  }].map((s, i) => React.createElement("div", {
-    key: i,
-    style: {
-      background: 'rgba(255,255,255,0.05)',
-      borderRadius: '8px',
-      padding: '5px 4px',
-      textAlign: 'center'
-    }
-  }, React.createElement("div", {
-    style: {
-      fontWeight: '800',
-      fontSize: '13px',
-      color: 'rgba(255,255,255,0.9)'
-    }
-  }, s.v), React.createElement("div", {
-    style: {
-      fontSize: '9px',
-      color: 'rgba(255,255,255,0.3)',
-      marginTop: '1px'
-    }
-  }, s.l)))), React.createElement("div", {
-    style: {
-      fontSize: '10px',
-      color: 'rgba(255,255,255,0.25)',
-      textAlign: 'right',
-      marginTop: '6px',
-      fontWeight: '700'
-    }
-  }, "\u2192 Stats d\xE9taill\xE9es")))) : null));
+  }, h("span", {
+    className: "rank num"
+  }, rank + 1), h("span", null, h("span", {
+    className: "player-name"
+  }, h("span", {
+    className: "dot"
+  }), h("span", null, p.name)), h("span", {
+    className: "player-meta"
+  }, p.games, " partie", p.games > 1 ? 's' : '', " \xB7 moyenne ", p.totalThrows > 0 ? (p.totalScore / p.totalThrows).toFixed(1).replace('.', ',') : '—')), h("span", {
+    className: "player-wins"
+  }, h("span", {
+    className: "num"
+  }, p.wins), h("small", null, "victoire", p.wins > 1 ? 's' : '')), h(Icon, {
+    name: "chevron",
+    size: 18
+  })))) : null));
 }
+
 function SettingsScreen({
   onBack
 }) {
-  const [storageSize, setStorageSize] = React.useState('…');
-  React.useEffect(() => {
+  const [storageSize, setStorageSize] = useState('…');
+  useEffect(() => {
     setStorageSize(formatStorageSize(estimateStorageSize()));
   }, []);
   function clearAll() {
-    if (window.confirm('Effacer tout l\'historique de jeu ?')) {
+    if (window.confirm('Effacer tout l\'historique et la partie en cours ?')) {
       clearStoredData();
       window.location.reload();
     }
@@ -1160,114 +790,104 @@ function SettingsScreen({
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistration('./sw.js').then(reg => {
         if (reg) {
-          reg.update().then(() => alert('✅ Vérification effectuée.\nVersion actuelle : ' + APP_VERSION));
+          reg.update().then(() => alert('Vérification effectuée.\nVersion installée : ' + APP_VERSION + '\nSi une nouvelle version existe, elle sera active au prochain lancement.'));
         } else {
-          alert('⚠️ Service Worker non encore actif.\nAssure-toi que sw.js est dans le même dossier que index.html.');
+          alert('Mode hors ligne pas encore actif : recharge la page une fois connecté.');
         }
       });
     } else {
-      alert('Service Workers non supportés sur ce navigateur.');
+      alert('Ce navigateur ne gère pas le mode hors ligne.');
     }
   }
-  return React.createElement("div", {
+  return h("div", {
     className: "screen"
-  }, React.createElement("div", {
-    className: "app-header"
-  }, React.createElement("button", {
-    className: "header-btn",
-    "aria-label": "Retour \xE0 l'accueil",
-    onClick: onBack
-  }, "\u2190 Retour"), React.createElement("div", {
-    className: "app-title"
-  }, "\u2699\uFE0F R\xE9glages"), React.createElement("div", {
-    style: {
-      width: '70px'
-    }
-  })), React.createElement("div", {
-    className: "scroll-content"
-  }, React.createElement("div", {
-    className: "card"
-  }, React.createElement("div", {
-    className: "card-title"
-  }, "\uD83D\uDCF1 Application"), React.createElement("div", {
-    className: "settings-row"
-  }, React.createElement("div", null, React.createElement("div", {
-    className: "settings-row-label"
-  }, "Version"), React.createElement("div", {
-    className: "settings-row-sub"
-  }, "M\xF6lkky Score App")), React.createElement("span", {
+  }, h(Topbar, {
+    title: "R\xE9glages",
+    onBack,
+    backLabel: "Retour \xE0 l'accueil"
+  }), h("div", {
+    className: "scroll"
+  }, h("section", {
+    className: "section"
+  }, h("h2", {
+    className: "section-title"
+  }, "Application"), h("div", {
+    className: "row"
+  }, h("div", null, h("div", {
+    className: "row-label"
+  }, "Version")), h("span", {
     className: "version-badge"
-  }, APP_VERSION)), React.createElement("div", {
-    className: "settings-row"
-  }, React.createElement("div", null, React.createElement("div", {
-    className: "settings-row-label"
-  }, "Mise \xE0 jour"), React.createElement("div", {
-    className: "settings-row-sub"
-  }, "V\xE9rifier une nouvelle version")), React.createElement("button", {
-    className: "btn btn-ghost btn-sm",
+  }, APP_VERSION)), h("div", {
+    className: "row"
+  }, h("div", null, h("div", {
+    className: "row-label"
+  }, "Mise \xE0 jour"), h("div", {
+    className: "row-sub"
+  }, "Chercher une nouvelle version")), h("button", {
+    type: "button",
+    className: "btn btn-secondary btn-sm",
     onClick: checkUpdate
-  }, "\uD83D\uDD04 V\xE9rifier")), React.createElement("div", {
-    className: "settings-row"
-  }, React.createElement("div", null, React.createElement("div", {
-    className: "settings-row-label"
-  }, "Mode hors-ligne"), React.createElement("div", {
-    className: "settings-row-sub"
-  }, 'serviceWorker' in navigator ? '✅ Supporté' : '❌ Non supporté')), React.createElement("span", {
-    style: {
-      fontSize: '18px'
-    }
-  }, "\uD83D\uDCF1"))), React.createElement("div", {
-    className: "card"
-  }, React.createElement("div", {
-    className: "card-title"
-  }, "\uD83D\uDCBE Donn\xE9es locales"), React.createElement("div", {
-    className: "settings-row"
-  }, React.createElement("div", null, React.createElement("div", {
-    className: "settings-row-label"
-  }, "Taille des donn\xE9es"), React.createElement("div", {
-    className: "settings-row-sub"
-  }, "Historique + partie en cours")), React.createElement("span", {
-    style: {
-      fontWeight: '800',
-      color: 'var(--muted)',
-      fontSize: '13px'
-    }
-  }, storageSize)), React.createElement("div", {
-    className: "settings-row"
-  }, React.createElement("div", null, React.createElement("div", {
-    className: "settings-row-label",
-    style: {
-      color: '#e74c3c'
-    }
-  }, "Effacer tout"), React.createElement("div", {
-    className: "settings-row-sub"
-  }, "Historique et partie en cours")), React.createElement("button", {
+  }, "V\xE9rifier")), h("div", {
+    className: "row"
+  }, h("div", null, h("div", {
+    className: "row-label"
+  }, "Hors ligne"), h("div", {
+    className: "row-sub"
+  }, "Jouer sans connexion")), h("span", {
+    className: "row-value"
+  }, 'serviceWorker' in navigator ? 'Disponible' : 'Indisponible'))), h("section", {
+    className: "section"
+  }, h("h2", {
+    className: "section-title"
+  }, "Donn\xE9es"), h("div", {
+    className: "row"
+  }, h("div", null, h("div", {
+    className: "row-label"
+  }, "Espace utilis\xE9"), h("div", {
+    className: "row-sub"
+  }, "Historique et partie en cours, sur cet appareil")), h("span", {
+    className: "row-value"
+  }, storageSize)), h("div", {
+    className: "row"
+  }, h("div", null, h("div", {
+    className: "row-label"
+  }, "Tout effacer"), h("div", {
+    className: "row-sub"
+  }, "Historique et partie en cours")), h("button", {
+    type: "button",
     className: "btn btn-danger btn-sm",
     onClick: clearAll
-  }, "\uD83D\uDDD1 Effacer"))), React.createElement("div", {
-    className: "card"
-  }, React.createElement("div", {
-    className: "card-title"
-  }, "\u2139\uFE0F \xC0 propos"), React.createElement("div", {
-    className: "settings-row"
-  }, React.createElement("div", null, React.createElement("div", {
-    className: "settings-row-label"
-  }, "Jeu d'origine"), React.createElement("div", {
-    className: "settings-row-sub"
-  }, "M\xF6lkky \xB7 Tactic Games \xB7 Finlande 1996"))), React.createElement("div", {
-    className: "settings-row"
-  }, React.createElement("div", null, React.createElement("div", {
-    className: "settings-row-label"
-  }, "Score cible officiel"), React.createElement("div", {
-    className: "settings-row-sub"
-  }, "50 pts \xB7 D\xE9passement \u2192 retombe \xE0 25"))), React.createElement("div", {
-    className: "settings-row"
-  }, React.createElement("div", null, React.createElement("div", {
-    className: "settings-row-label"
-  }, "\xC9limination officielle"), React.createElement("div", {
-    className: "settings-row-sub"
-  }, "3 rat\xE9s cons\xE9cutifs"))))));
+  }, "Effacer"))), h("section", {
+    className: "section"
+  }, h("h2", {
+    className: "section-title"
+  }, "R\xE8gle officielle"), h("div", {
+    className: "row"
+  }, h("div", {
+    className: "row-label"
+  }, "Score cible"), h("span", {
+    className: "row-value"
+  }, "50 pile")), h("div", {
+    className: "row"
+  }, h("div", {
+    className: "row-label"
+  }, "D\xE9passement"), h("span", {
+    className: "row-value"
+  }, "retour \xE0 25")), h("div", {
+    className: "row"
+  }, h("div", {
+    className: "row-label"
+  }, "\xC9limination"), h("span", {
+    className: "row-value"
+  }, "3 rat\xE9s de suite")), h("div", {
+    className: "row"
+  }, h("div", {
+    className: "row-label"
+  }, "Origine"), h("span", {
+    className: "row-value"
+  }, "Finlande, 1996")))));
 }
+
 function HomeScreen({
   onSetup,
   onHistory,
@@ -1278,224 +898,100 @@ function HomeScreen({
   savedGame
 }) {
   const [rulesOpen, setRulesOpen] = useState(false);
-  const rules = [{
-    icon: '🎯',
-    text: '1 quille renversée → son numéro en points'
-  }, {
-    icon: '🎳',
-    text: 'Plusieurs quilles → nombre de quilles tombées'
-  }, {
-    icon: '💥',
-    text: 'Dépasser 50 → score ramené à 25'
-  }, {
-    icon: '❌',
-    text: '3 ratés consécutifs → élimination du joueur'
-  }, {
-    icon: '🔄',
-    text: 'Les quilles tombées sont relevées là où elles atterrissent'
-  }, {
-    icon: '🏆',
-    text: 'Premier à atteindre exactement 50 gagne !'
-  }];
-  return React.createElement("div", {
+  const rules = [['1', 'quille tombée : on marque son numéro'], ['2 à 12', 'quilles tombées : on marque le nombre de quilles'], ['50', 'pile pour gagner'], ['+ de 50', 'on retombe à 25'], ['3', 'ratés de suite : élimination'], ['↻', 'les quilles sont relevées là où elles sont tombées']];
+  return h("div", {
     className: "screen"
-  }, React.createElement("div", {
-    className: "app-header"
-  }, React.createElement("div", {
-    className: "app-title"
-  }, "M\xF6l", React.createElement("span", null, "kky")), React.createElement("div", {
-    className: "home-header-spacer",
-    "aria-hidden": "true"
-  })), React.createElement("div", {
-    className: "scroll-content home-scroll"
-  }, React.createElement("div", {
-    className: "home-hero"
-  }, React.createElement("div", {
-    className: "home-hero-flag"
-  }, "\uD83C\uDDEB\uD83C\uDDEE  Finlande \xB7 1996"), React.createElement("h1", null, "M\xD6L", React.createElement("span", null, "KKY")), React.createElement("p", null, "Jeu de quilles de pr\xE9cision")), savedGame && React.createElement("div", {
-    style: {
-      background: 'rgba(200,133,74,0.1)',
-      border: '1px solid rgba(200,133,74,0.4)',
-      borderRadius: '14px',
-      padding: '14px 16px',
-      marginBottom: '14px'
-    }
-  }, React.createElement("div", {
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '10px',
-      marginBottom: '10px'
-    }
-  }, React.createElement("div", {
-    style: {
-      width: 36,
-      height: 36,
-      borderRadius: '50%',
-      background: 'rgba(200,133,74,0.2)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontSize: '18px',
-      flexShrink: 0
-    }
-  }, "\uD83D\uDCBE"), React.createElement("div", null, React.createElement("div", {
-    style: {
-      fontWeight: '800',
-      fontSize: '14px',
-      color: 'rgba(255,255,255,0.9)'
-    }
-  }, "Partie en cours"), React.createElement("div", {
-    style: {
-      fontSize: '11px',
-      color: 'rgba(255,255,255,0.4)',
-      marginTop: '2px'
-    }
-  }, "Sauvegard\xE9e ", formatDate(savedGame.savedAt), " \xB7 Round ", savedGame.round))), React.createElement("div", {
-    style: {
-      display: 'flex',
-      gap: '6px',
-      flexWrap: 'wrap',
-      marginBottom: '12px'
-    }
-  }, (savedGame.teams || []).map((t, i) => React.createElement("span", {
+  }, h("div", {
+    className: "scroll"
+  }, h("div", {
+    className: "home"
+  }, h("div", {
+    className: "home-head"
+  }, h("div", null, h("h1", {
+    className: "wordmark"
+  }, "M\xF6lkky"), h("p", {
+    className: "home-tagline"
+  }, "Feuille de score"))), savedGame && h("div", {
+    className: "resume"
+  }, h("div", null, h("div", {
+    className: "resume-title"
+  }, "Partie en cours"), h("div", {
+    className: "resume-sub"
+  }, savedGame.gameLabel ? `${savedGame.gameLabel} · ` : '', "round ", savedGame.round, " \xB7 ", formatDate(savedGame.savedAt))), h("div", {
+    className: "resume-teams"
+  }, (savedGame.teams || []).map((t, i) => h("span", {
     key: i,
+    className: "resume-team"
+  }, h("span", {
+    className: "dot",
     style: {
-      background: t.color + '18',
-      border: `1px solid ${t.color}66`,
-      borderRadius: '6px',
-      padding: '4px 10px',
-      fontSize: '12px',
-      fontWeight: '800',
-      color: t.color
+      '--team': t.color
     }
-  }, t.name, "  ", t.score))), React.createElement("div", {
-    style: {
-      display: 'flex',
-      gap: '8px'
-    }
-  }, React.createElement("button", {
-    className: "btn btn-wood btn-full",
+  }), t.name, h("span", {
+    className: "num"
+  }, t.score)))), h("div", {
+    className: "resume-actions"
+  }, h("button", {
+    type: "button",
+    className: "btn btn-primary",
     "aria-label": "Reprendre la partie en cours",
-    onClick: onResume,
-    style: {
-      fontSize: '14px'
-    }
-  }, "\u25B6  Reprendre la partie"), React.createElement("button", {
+    onClick: onResume
+  }, h(Icon, {
+    name: "play"
+  }), "Reprendre"), h("button", {
+    type: "button",
+    className: "btn btn-danger",
     "aria-label": "Effacer la partie en cours",
-    title: "Abandonner et effacer cette partie",
-    style: {
-      background: 'rgba(231,76,60,0.1)',
-      border: '1px solid rgba(231,76,60,0.25)',
-      borderRadius: '8px',
-      padding: '10px 14px',
-      color: 'rgba(231,76,60,0.6)',
-      fontSize: '13px',
-      cursor: 'pointer',
-      flexShrink: 0
-    },
     onClick: () => {
-      if (window.confirm('Voulez-vous vraiment effacer la partie en cours ?')) {
+      if (window.confirm('Effacer la partie en cours ?')) {
         clearCurrentGame();
         onClearSaved();
       }
     }
-  }, "\uD83D\uDDD1"))), React.createElement(FieldDiagram, null), React.createElement("div", {
-    style: {
-      background: 'rgba(255,255,255,0.04)',
-      border: '1px solid rgba(255,255,255,0.08)',
-      borderRadius: '14px',
-      marginBottom: '14px',
-      overflow: 'hidden'
-    }
-  }, React.createElement("button", {
-    onClick: () => setRulesOpen(o => !o),
-    "aria-expanded": rulesOpen,
-    style: {
-      width: '100%',
-      background: 'transparent',
-      border: 'none',
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: '14px 16px',
-      WebkitTapHighlightColor: 'transparent'
-    }
-  }, React.createElement("div", {
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '10px'
-    }
-  }, React.createElement("span", {
-    style: {
-      fontSize: '16px'
-    }
-  }, "\uD83D\uDCCB"), React.createElement("span", {
-    style: {
-      fontSize: '13px',
-      fontWeight: '800',
-      color: 'rgba(255,255,255,0.7)',
-      letterSpacing: '1px',
-      textTransform: 'uppercase'
-    }
-  }, "R\xE8gles du jeu")), React.createElement("span", {
-    style: {
-      fontSize: '16px',
-      color: 'rgba(255,255,255,0.3)',
-      display: 'inline-block',
-      transform: rulesOpen ? 'rotate(180deg)' : 'none',
-      transition: 'transform 0.25s'
-    }
-  }, "\u25BC")), rulesOpen && React.createElement("div", {
-    style: {
-      padding: '0 16px 16px'
-    }
-  }, rules.map((r, i) => React.createElement("div", {
-    key: i,
-    style: {
-      display: 'flex',
-      alignItems: 'flex-start',
-      gap: '12px',
-      padding: '8px 0',
-      borderBottom: i < rules.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none'
-    }
-  }, React.createElement("span", {
-    style: {
-      fontSize: '16px',
-      flexShrink: 0,
-      width: '22px',
-      textAlign: 'center',
-      marginTop: '1px'
-    }
-  }, r.icon), React.createElement("span", {
-    style: {
-      fontSize: '13px',
-      color: 'rgba(255,255,255,0.65)',
-      fontWeight: '600',
-      lineHeight: '1.5'
-    }
-  }, r.text))))), React.createElement("button", {
-    className: "btn btn-primary btn-full btn-lg",
-    onClick: onSetup,
-    style: {
-      letterSpacing: '1px'
-    }
-  }, "\uD83C\uDFAF  Nouvelle Partie"), React.createElement("div", {
-    className: "home-secondary-actions"
-  }, historyCount > 0 && React.createElement("button", {
+  }, h(Icon, {
+    name: "trash"
+  })))), h("button", {
     type: "button",
-    className: "home-secondary-action",
+    className: `btn ${savedGame ? 'btn-secondary' : 'btn-primary'} btn-block btn-lg`,
+    onClick: onSetup
+  }, h(Icon, {
+    name: "plus"
+  }), "Nouvelle partie"), h("div", {
+    className: "home-actions"
+  }, historyCount > 0 && h("button", {
+    type: "button",
+    className: "btn btn-secondary",
     "aria-label": `Ouvrir l'historique, ${historyCount} parties`,
     onClick: onHistory
-  }, "Historique", React.createElement("span", null, historyCount)), React.createElement("button", {
+  }, h(Icon, {
+    name: "clock"
+  }), "Historique", h("span", {
+    className: "count num"
+  }, historyCount)), h("button", {
     type: "button",
-    className: "home-secondary-action",
+    className: "btn btn-secondary",
     "aria-label": "Ouvrir les r\xE9glages",
     onClick: onSettings
-  }, "R\xE9glages"))));
+  }, h(Icon, {
+    name: "sliders"
+  }), "R\xE9glages")), h(FieldDiagram, null), h("div", {
+    className: "rules"
+  }, h("button", {
+    type: "button",
+    className: "rules-toggle",
+    "aria-expanded": rulesOpen,
+    onClick: () => setRulesOpen(o => !o)
+  }, "R\xE8gles du jeu", h(Icon, {
+    name: "chevron"
+  })), rulesOpen && h("ul", {
+    className: "rules-list"
+  }, rules.map(([n, text]) => h("li", {
+    key: n
+  }, h("span", {
+    className: "num"
+  }, n), h("span", null, text))))))));
 }
+
 function App() {
   const [screen, setScreen] = useState('home');
   const [gameConfig, setGameConfig] = useState(null);

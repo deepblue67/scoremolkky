@@ -302,7 +302,7 @@
     if (overflow && activeRules.overflowMode === 'none') {
       return {
         type: 'toast',
-        message: '\uD83D\uDCA5 D\u00E9passement \u2014 lancer annul\u00E9',
+        message: 'D\u00E9passement : lancer ignor\u00E9',
       };
     }
 
@@ -344,7 +344,7 @@
 
     return {
       type: 'toast',
-      message: activeRules.eliminationOn ? `\u274C Rat\u00E9 ! (${newMisses}/${limit})` : '\u274C Rat\u00E9 !',
+      message: activeRules.eliminationOn ? `Rat\u00E9 (${newMisses}/${limit})` : 'Rat\u00E9',
     };
   }
 

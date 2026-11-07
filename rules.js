@@ -42,7 +42,7 @@
       return {
         overflow: true,
         displayScore: teamScore,
-        label: '🚫 Ignoré',
+        label: 'Ignoré',
       };
     }
 
@@ -51,12 +51,12 @@
       return {
         overflow: true,
         displayScore: teamScore,
-        label: '⚠️ Grâce',
+        label: 'Essai de grâce',
       };
     }
 
     const mode = activeRules.overflowMode || '25';
-    const label = mode === '0' ? '⚠️ → 0' : mode === 'half' ? '⚠️ → moitié' : '⚠️ Dépasse';
+    const label = 'Dépassement';
 
     return {
       overflow: true,

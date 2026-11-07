@@ -163,7 +163,7 @@ async function assertGameControlsDoNotOverlap(page, label) {
     const rect = el => el.getBoundingClientRect();
     const overlap = (a, b) => a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1;
     const pins = Array.from(document.querySelectorAll('.pin-btn')).map(rect);
-    const others = ['.score-preview-inner', '.miss-bar-btn', '.validate-btn', '.current-turn']
+    const others = ['.preview', '.miss-bar-btn', '.validate-btn', '.turnbar']
       .map(sel => [sel, document.querySelector(sel)])
       .filter(([, el]) => el)
       .map(([sel, el]) => [sel, rect(el)]);
@@ -238,7 +238,7 @@ async function auditHistoryKeyboard(page, baseUrl) {
 
   await page.getByRole('button', { name: /Audit mobile, gagnée par Alpha/i }).focus();
   await page.keyboard.press('Enter');
-  await page.getByText('Détail partie', { exact: false }).waitFor();
+  await page.getByText('Détail de la partie', { exact: false }).waitFor();
 }
 
 async function main() {

@@ -24,19 +24,19 @@ assert.deepEqual(rules.previewScoreAfterThrow(20, 8, 30, { overflowMode: '25' })
 assert.deepEqual(rules.previewScoreAfterThrow(28, 5, 30, { overflowMode: 'none' }), {
   overflow: true,
   displayScore: 28,
-  label: '🚫 Ignoré',
+  label: 'Ignoré',
 });
 
 assert.deepEqual(rules.previewScoreAfterThrow(28, 5, 30, { overflowMode: '0' }), {
   overflow: true,
   displayScore: 0,
-  label: '⚠️ → 0',
+  label: 'Dépassement',
 });
 
 assert.deepEqual(rules.previewScoreAfterThrow(28, 5, 30, { overflowMode: 'half' }), {
   overflow: true,
   displayScore: 16,
-  label: '⚠️ → moitié',
+  label: 'Dépassement',
 });
 
 const baseTeam = {

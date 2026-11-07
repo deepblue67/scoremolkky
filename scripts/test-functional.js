@@ -190,29 +190,27 @@ async function testCurrentMatchHistory(page, baseUrl) {
   await page.getByRole('button', { name: /Fermer l'historique des coups/i }).click();
 }
 
-async function testScrollableScoreboardForManyTeams(page, baseUrl) {
+async function testScoreboardShowsAllTeams(page, baseUrl) {
   await startGame(page, baseUrl, {
-    extraTeams: ['Gamma', 'Delta', 'Epsilon'],
+    extraTeams: ['Gamma', 'Delta', 'Epsilon', 'Zeta'],
   });
 
+  // Les 6 équipes sont visibles en même temps, sans défilement.
   const metrics = await page.evaluate(() => {
     const board = document.querySelector('.scoreboard');
-    const firstCard = document.querySelector('.team-score-card');
-    const boardRect = board.getBoundingClientRect();
-    const cardRect = firstCard.getBoundingClientRect();
-    board.scrollLeft = board.scrollWidth;
+    const cards = Array.from(document.querySelectorAll('.team-score-card')).map(card => card.getBoundingClientRect());
     return {
-      clientWidth: Math.round(board.clientWidth),
-      scrollWidth: Math.round(board.scrollWidth),
-      scrolledLeft: Math.round(board.scrollLeft),
-      cardWidth: Math.round(cardRect.width),
-      boardWidth: Math.round(boardRect.width),
+      count: cards.length,
+      allInside: cards.every(r => r.left >= 0 && r.right <= window.innerWidth && r.top >= 0 && r.bottom <= window.innerHeight),
+      scrolls: board.scrollWidth > board.clientWidth + 1 || board.scrollHeight > board.clientHeight + 1,
+      minWidth: Math.round(Math.min(...cards.map(r => r.width))),
     };
   });
 
-  assert.ok(metrics.scrollWidth > metrics.clientWidth + 40, `scoreboard should scroll: ${JSON.stringify(metrics)}`);
-  assert.ok(metrics.scrolledLeft > 0, `scoreboard should accept horizontal scroll: ${JSON.stringify(metrics)}`);
-  assert.ok(metrics.cardWidth >= metrics.boardWidth * 0.42, `team cards should remain readable: ${JSON.stringify(metrics)}`);
+  assert.equal(metrics.count, 6);
+  assert.ok(metrics.allInside, `toutes les équipes doivent être visibles : ${JSON.stringify(metrics)}`);
+  assert.ok(!metrics.scrolls, `le tableau ne doit pas défiler : ${JSON.stringify(metrics)}`);
+  assert.ok(metrics.minWidth >= 150, `tuiles trop étroites : ${JSON.stringify(metrics)}`);
 }
 
 async function assertScore(page, teamName, score) {
@@ -231,8 +229,8 @@ async function testWinAndHistory(page, baseUrl) {
 
   await page.getByText('Victoire', { exact: false }).waitFor();
   await page.getByText('Alpha', { exact: false }).first().waitFor();
-  const victoryText = await page.textContent('body');
-  assert.match(victoryText, /Lancers\s*3/i);
+  const throwsStat = await page.locator('.stat', { hasText: 'Lancers' }).locator('.stat-value').textContent();
+  assert.equal(throwsStat.trim(), '3');
 
   await page.getByRole('button', { name: /Accueil/i }).click();
   await page.getByRole('button', { name: /Historique/i }).click();
@@ -337,7 +335,7 @@ async function testPauseKeepsGameAndRestartKeepsHandicap(page, baseUrl) {
   await assertScore(page, 'Alpha', '9');
 
   await page.getByRole('button', { name: /pause/i }).click();
-  await page.getByRole('button', { name: /Recommencer avec les mêmes/i }).click();
+  await page.getByRole('button', { name: /Recommencer la partie/i }).click();
   await page.getByText('Tour de Alpha', { exact: false }).waitFor();
   await assertScore(page, 'Alpha', '0');
   await assertScore(page, 'Beta', '5');
@@ -363,7 +361,7 @@ async function testOfflineReload(page, baseUrl, server) {
   await page.reload();
   await page.waitForSelector('h1');
   assert.equal(await page.title(), 'Mölkky Score');
-  assert.match(await page.textContent('body'), /MÖLKKY/);
+  assert.match(await page.textContent('body'), /Mölkky/);
 }
 
 async function main() {
@@ -381,7 +379,7 @@ async function main() {
     await testSetupLabelAndTeamOrder(page, baseUrl);
     await testThrowUndoAndMiss(page, baseUrl);
     await testCurrentMatchHistory(page, baseUrl);
-    await testScrollableScoreboardForManyTeams(page, baseUrl);
+    await testScoreboardShowsAllTeams(page, baseUrl);
     await testWinAndHistory(page, baseUrl);
     await testOverflowGraceAndPenalty(page, baseUrl);
     await testEliminationWin(page, baseUrl);

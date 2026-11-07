@@ -1,485 +1,206 @@
 (function (root, factory) {
-  const dialogs = factory(root.React);
+  const dialogs = factory(root.React, root.MolkkyComponents);
   if (typeof module === 'object' && module.exports) {
     module.exports = dialogs;
   }
   root.MolkkyDialogs = dialogs;
-})(typeof globalThis !== 'undefined' ? globalThis : this, function (React) {
-function RulePopup({
-  rule,
-  onClose
-}) {
-  const rules = {
+})(typeof globalThis !== 'undefined' ? globalThis : this, function (React, components) {
+  const h = React ? React.createElement : null;
+  const { Icon, Sheet } = components || {};
+
+  const RULES_HELP = {
     elimination: {
-      title: '❌ Élimination par ratés',
-      color: '#e74c3c',
-      icon: '🚫',
-      content: [{
-        heading: 'La règle',
-        text: 'Un joueur qui rate N lancers consécutifs est éliminé. Tu choisis N avant la partie.'
-      }, {
-        heading: "Qu'est-ce qu'un raté ?",
-        text: "Aucune quille renversée. Le compteur repart à zéro dès qu'une quille tombe."
-      }, {
-        heading: '2 ratés',
-        text: 'Mode expert — punit sévèrement les erreurs.'
-      }, {
-        heading: '3 ratés',
-        text: 'Règle officielle — équilibre entre indulgence et rigueur.'
-      }, {
-        heading: '4 ratés',
-        text: 'Mode famille — parfait avec des enfants ou débutants.'
-      }, {
-        heading: 'Sans élimination',
-        text: 'Les ratés ne font rien. Personne ne peut être éliminé.'
-      }]
+      title: 'Élimination par ratés',
+      blocks: [
+        ['La règle', 'Une équipe qui rate N lancers de suite est éliminée. Tu choisis N avant la partie.'],
+        ["Qu'est-ce qu'un raté ?", "Aucune quille renversée. Le compteur repart à zéro dès qu'une quille tombe."],
+        ['2 ratés', 'Mode expert : chaque erreur coûte cher.'],
+        ['3 ratés', 'Règle officielle.'],
+        ['4 ratés', 'Mode famille, idéal avec des enfants ou des débutants.'],
+        ['Sans élimination', 'Les ratés ne font rien. Personne ne peut être éliminé.'],
+      ],
     },
     overflow: {
-      title: '💥 Dépassement du score cible',
-      color: '#f39c12',
-      icon: '⚠️',
-      content: [{
-        heading: 'Le principe',
-        text: "Si un joueur dépasse le score cible, il est pénalisé selon la règle choisie."
-      }, {
-        heading: 'Retombe à 25 (officiel)',
-        text: 'Le score est ramené à 25 — moitié de 50. La règle officielle Mölkky.'
-      }, {
-        heading: 'Retombe à 0',
-        text: "Mode sévère : le joueur repart de zéro. Plus de tension en fin de partie."
-      }, {
-        heading: 'Retombe à la moitié',
-        text: "Le score est divisé par 2. Pénalité proportionnelle au score du joueur."
-      }, {
-        heading: 'Rien ne se passe',
-        text: "Mode débutant : dépasser ne coûte rien, on ignore le lancer et on recommence."
-      }]
+      title: 'Dépassement du score cible',
+      blocks: [
+        ['Le principe', 'Une équipe qui dépasse le score cible est pénalisée selon la règle choisie.'],
+        ['Retombe à 25', 'La règle officielle du Mölkky.'],
+        ['Retombe à 0', 'Mode sévère : on repart de zéro.'],
+        ['Retombe à la moitié', 'Le score obtenu est divisé par deux.'],
+        ['Rien', 'Mode débutant : le lancer est ignoré, le score ne bouge pas.'],
+        ['Essais de grâce', 'Nombre de dépassements tolérés (score inchangé) avant que la pénalité ne tombe.'],
+      ],
     },
     handicap: {
-      title: '🎯 Handicap de départ',
-      color: '#3498db',
-      icon: '⚖️',
-      content: [{
-        heading: 'Le principe',
-        text: "Un joueur moins expérimenté commence avec des points d'avance."
-      }, {
-        heading: 'Comment ça marche',
-        text: "Le joueur avec handicap démarre à X points. Il doit atteindre le score cible comme les autres, mais depuis une position avancée."
-      }, {
-        heading: 'Exemple',
-        text: "Handicap 10 → le joueur commence à 10 pts. Il n'a besoin que de 40 pts supplémentaires."
-      }, {
-        heading: 'Équilibre',
-        text: "Idéal pour mélanger adultes et enfants, ou joueurs de niveaux différents, sans frustrer personne."
-      }]
-    }
+      title: 'Handicap de départ',
+      blocks: [
+        ['Le principe', "Une équipe moins expérimentée commence avec des points d'avance."],
+        ['Exemple', "Handicap de 10 avec une cible à 50 : l'équipe démarre à 10 et doit encore marquer exactement 40 points."],
+        ['Pourquoi', 'Pour mélanger adultes et enfants, ou des joueurs de niveaux différents, sans frustrer personne.'],
+      ],
+    },
   };
-  const r = rules[rule];
-  if (!r) return null;
-  return React.createElement("div", {
-    style: {
-      position: 'fixed',
-      inset: 0,
-      background: 'rgba(0,0,0,0.65)',
-      zIndex: 2000,
-      display: 'flex',
-      alignItems: 'flex-end',
-      justifyContent: 'center'
-    },
-    onClick: onClose
-  }, React.createElement("div", {
-    role: "dialog",
-    "aria-modal": "true",
-    "aria-labelledby": "rule-dialog-title",
-    style: {
-      background: '#fff',
-      borderRadius: '24px 24px 0 0',
-      padding: '24px 20px 32px',
-      width: '100%',
-      maxWidth: '480px',
-      maxHeight: '80vh',
-      overflowY: 'auto',
-      animation: 'slideUp 0.3s ease'
-    },
-    onClick: e => e.stopPropagation()
-  }, React.createElement("style", null, `@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}`), React.createElement("div", {
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '10px',
-      marginBottom: '18px'
-    }
-  }, React.createElement("span", {
-    style: {
-      fontSize: '28px'
-    }
-  }, r.icon), React.createElement("span", {
-    id: "rule-dialog-title",
-    style: {
-      fontFamily: "'Fredoka One',cursive",
-      fontSize: '18px',
-      color: r.color,
-      flex: 1
-    }
-  }, r.title), React.createElement("button", {
-    type: "button",
-    "aria-label": "Fermer l'aide",
-    onClick: onClose,
-    style: {
-      background: '#f0f0f0',
-      border: 'none',
-      borderRadius: '50%',
-      width: '32px',
-      height: '32px',
-      fontSize: '16px',
-      cursor: 'pointer',
-      fontWeight: '900',
-      color: '#666'
-    }
-  }, "\xD7")), r.content.map((b, i) => React.createElement("div", {
-    key: i,
-    style: {
-      marginBottom: '14px'
-    }
-  }, React.createElement("div", {
-    style: {
-      fontWeight: '900',
-      color: '#2d5016',
-      fontSize: '14px',
-      marginBottom: '4px'
-    }
-  }, b.heading), React.createElement("div", {
-    style: {
-      fontSize: '14px',
-      color: '#4a3a2a',
-      lineHeight: '1.6'
-    }
-  }, b.text))), React.createElement("button", {
-    className: "btn btn-primary btn-full",
-    onClick: onClose,
-    style: {
-      marginTop: '8px'
-    }
-  }, "Compris !")));
-}
 
-function EventPopup({
-  popup,
-  onClose
-}) {
-  const {
-    type,
-    teamName,
-    teamColor,
-    data
-  } = popup;
-  const cfgs = {
-    overflow_penalized: {
-      emoji: '💥',
-      bg: 'linear-gradient(135deg,#fff5e6,#ffe0b0)',
-      border: '#f39c12',
-      titleColor: '#c0780a',
-      title: `${teamName} — dépassement pénalisé !`,
-      lines: [{
-        icon: '🎯',
-        text: `Score visé : ${data.targetScore} pts`
-      }, {
-        icon: '📈',
-        text: `Score atteint : ${data.scoreBefore} pts — dépassement !`
-      }, {
-        icon: '📉',
-        text: `Nouveau score : ${data.newScore} pts`
-      }],
-      explanation: data.mode === '0' ? `Score ramené à 0 — mode sévère !` : data.mode === 'half' ? `Score divisé par 2 — pénalité proportionnelle.` : `En Mölkky, dépasser le score cible ramène à 25. Mieux vaut être précis qu'ambitieux !`,
-      tip: `💡 Il faut maintenant marquer exactement ${data.targetScore - data.newScore} pts.`
-    },
-    overflow_grace: {
-      emoji: '⚠️',
-      bg: 'linear-gradient(135deg,#fffde6,#fff9c4)',
-      border: '#f1c40f',
-      titleColor: '#b7860a',
-      title: `Dépassement pour ${teamName} !`,
-      lines: [{
-        icon: '📈',
-        text: `${data.scoreBefore} + ${data.score} = ${data.scoreBefore + data.score} pts`
-      }, {
-        icon: '🎯',
-        text: `Score cible : ${data.targetScore} pts — dépassé !`
-      }, {
-        icon: '🔁',
-        text: `Essais de grâce restants : ${data.remaining} sur ${data.graceTotal}`
-      }],
-      explanation: `${data.graceTotal} essai${data.graceTotal > 1 ? 's' : ''} de grâce avant pénalité.`,
-      tip: data.remaining > 0 ? `💡 Encore ${data.remaining} essai${data.remaining > 1 ? 's' : ''} !` : `⚠️ C'était le dernier essai !`
-    },
-    eliminated: {
-      emoji: '❌',
-      bg: 'linear-gradient(135deg,#fff0f0,#ffd6d6)',
-      border: '#e74c3c',
-      titleColor: '#c0392b',
-      title: `${teamName} est éliminé(e) !`,
-      lines: [{
-        icon: '❌',
-        text: `${data.misses} ratés consécutifs`
-      }, {
-        icon: '🚫',
-        text: `${teamName} ne peut plus jouer`
-      }],
-      explanation: `Un joueur qui rate ${data.limit || 3} lancers de suite est éliminé. Un raté = aucune quille renversée. Le compteur repart à zéro dès qu'une quille tombe.`,
-      tip: data.winnerName ? `🏆 ${data.winnerName} remporte la partie !` : `💡 Les autres équipes continuent jusqu'à la victoire.`
-    }
-  };
-  const cfg = cfgs[type];
-  if (!cfg) return null;
-  return React.createElement("div", {
-    style: {
-      position: 'fixed',
-      inset: 0,
-      zIndex: 3000,
-      background: 'rgba(0,0,0,0.6)',
-      display: 'flex',
-      alignItems: 'flex-end',
-      justifyContent: 'center'
-    },
-    onClick: onClose
-  }, React.createElement("div", {
-    role: "dialog",
-    "aria-modal": "true",
-    "aria-labelledby": "event-dialog-title",
-    style: {
-      background: cfg.bg,
-      border: `3px solid ${cfg.border}`,
-      borderRadius: '24px 24px 0 0',
-      padding: '24px 20px 36px',
-      width: '100%',
-      maxWidth: '480px',
-      animation: 'slideUp 0.35s cubic-bezier(0.34,1.56,0.64,1)'
-    },
-    onClick: e => e.stopPropagation()
-  }, React.createElement("div", {
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '12px',
-      marginBottom: '16px'
-    }
-  }, React.createElement("span", {
-    style: {
-      fontSize: '40px',
-      lineHeight: 1
-    }
-  }, cfg.emoji), React.createElement("div", {
-    style: {
-      flex: 1
-    }
-  }, React.createElement("div", {
-    id: "event-dialog-title",
-    style: {
-      fontFamily: "'Fredoka One',cursive",
-      fontSize: '20px',
-      color: cfg.titleColor,
-      lineHeight: 1.2
-    }
-  }, cfg.title), React.createElement("div", {
-    style: {
-      fontSize: '12px',
-      color: '#888',
-      marginTop: '3px',
-      fontWeight: '700'
-    }
-  }, "Appuie n'importe o\xF9 pour continuer")), React.createElement("div", {
-    style: {
-      width: '10px',
-      height: '10px',
-      borderRadius: '50%',
-      background: teamColor,
-      flexShrink: 0,
-      boxShadow: `0 0 0 3px ${teamColor}44`
-    }
-  })), React.createElement("div", {
-    style: {
-      background: 'rgba(255,255,255,0.7)',
-      borderRadius: '12px',
-      padding: '12px 14px',
-      marginBottom: '14px'
-    }
-  }, cfg.lines.map((l, i) => React.createElement("div", {
-    key: i,
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '10px',
-      padding: '5px 0',
-      borderBottom: i < cfg.lines.length - 1 ? '1px solid rgba(0,0,0,0.07)' : 'none'
-    }
-  }, React.createElement("span", {
-    style: {
-      fontSize: '18px',
-      flexShrink: 0
-    }
-  }, l.icon), React.createElement("span", {
-    style: {
-      fontSize: '14px',
-      fontWeight: '700',
-      color: '#3a2a1a'
-    }
-  }, l.text)))), React.createElement("div", {
-    style: {
-      fontSize: '13px',
-      color: '#5a4a3a',
-      lineHeight: '1.65',
-      marginBottom: '12px'
-    }
-  }, cfg.explanation), cfg.tip && React.createElement("div", {
-    style: {
-      background: 'rgba(255,255,255,0.6)',
-      borderRadius: '10px',
-      padding: '10px 12px',
-      fontSize: '13px',
-      fontWeight: '800',
-      color: '#3a2a1a'
-    }
-  }, cfg.tip), React.createElement("button", {
-    className: "btn btn-primary btn-full",
-    onClick: onClose,
-    style: {
-      marginTop: '16px',
-      fontSize: '15px'
-    }
-  }, "OK, j'ai compris !")));
-}
-function AbandonModal({
-  teams,
-  onClose,
-  onSameTeams,
-  onPause,
-  onAbandon
-}) {
-  const secondaryBtn = {
-    background: 'rgba(255,255,255,0.07)',
-    border: '1px solid rgba(255,255,255,0.14)',
-    borderRadius: '14px',
-    padding: '13px',
-    color: 'rgba(255,255,255,0.85)',
-    fontFamily: "'Fredoka One',cursive",
-    fontSize: '15px',
-    cursor: 'pointer'
-  };
-  return React.createElement("div", {
-    style: {
-      position: 'fixed',
-      inset: 0,
-      zIndex: 4000,
-      background: 'rgba(0,0,0,0.75)',
-      display: 'flex',
-      alignItems: 'flex-end',
-      justifyContent: 'center'
-    },
-    onClick: onClose
-  }, React.createElement("div", {
-    role: "dialog",
-    "aria-modal": "true",
-    "aria-labelledby": "abandon-dialog-title",
-    style: {
-      background: '#1a2e0d',
-      border: '1px solid rgba(255,255,255,0.1)',
-      borderRadius: '24px 24px 0 0',
-      padding: '24px 20px max(28px, env(safe-area-inset-bottom))',
-      width: '100%',
-      maxWidth: '480px',
-      animation: 'slideUp 0.3s cubic-bezier(0.34,1.2,0.64,1)'
-    },
-    onClick: e => e.stopPropagation()
-  }, React.createElement("div", {
-    style: {
-      textAlign: 'center',
-      marginBottom: '18px'
-    }
-  }, React.createElement("div", {
-    id: "abandon-dialog-title",
-    style: {
-      fontFamily: "'Fredoka One',cursive",
-      fontSize: '22px',
-      color: '#fff',
-      marginBottom: '6px'
-    }
-  }, "\u23F8 Partie en pause"), React.createElement("div", {
-    style: {
-      fontSize: '13px',
-      color: 'rgba(255,255,255,0.55)'
-    }
-  }, "Que veux-tu faire ?")), React.createElement("div", {
-    style: {
-      display: 'flex',
-      gap: '8px',
-      marginBottom: '18px',
-      flexWrap: 'wrap'
-    }
-  }, teams.map((t, i) => React.createElement("div", {
-    key: i,
-    style: {
-      flex: 1,
-      minWidth: '70px',
-      background: 'rgba(255,255,255,0.05)',
-      border: `1px solid ${t.color}44`,
-      borderRadius: '10px',
-      padding: '8px',
-      textAlign: 'center'
-    }
-  }, React.createElement("div", {
-    style: {
-      fontSize: '10px',
-      fontWeight: '900',
-      color: t.color,
-      textTransform: 'uppercase',
-      letterSpacing: '0.5px'
-    }
-  }, t.name), React.createElement("div", {
-    style: {
-      fontFamily: "'Fredoka One',cursive",
-      fontSize: '22px',
-      color: '#fff'
-    }
-  }, t.score)))), React.createElement("div", {
-    style: {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '10px'
-    }
-  }, React.createElement("button", {
-    onClick: onClose,
-    style: {
-      background: 'linear-gradient(135deg,#4caf50,#2d7a2d)',
-      border: 'none',
-      borderRadius: '14px',
-      padding: '15px',
-      color: '#fff',
-      fontFamily: "'Fredoka One',cursive",
-      fontSize: '16px',
-      cursor: 'pointer',
-      boxShadow: '0 4px 0 #1a4d1a'
-    }
-  }, "\u25B6 Reprendre la partie"), React.createElement("button", {
-    onClick: onPause,
-    style: secondaryBtn
-  }, "\uD83C\uDFE0 Retour \xE0 l'accueil (partie sauvegard\xE9e)"), React.createElement("button", {
-    onClick: onSameTeams,
-    style: secondaryBtn
-  }, "\uD83D\uDD04 Recommencer avec les m\xEAmes \xE9quipes"), React.createElement("button", {
-    onClick: onAbandon,
-    style: {
-      background: 'transparent',
-      border: '1px solid rgba(231,76,60,0.45)',
-      borderRadius: '14px',
-      padding: '12px',
-      color: '#ff8a7a',
-      fontFamily: "'Nunito',sans-serif",
-      fontSize: '14px',
-      fontWeight: '800',
-      cursor: 'pointer'
-    }
-  }, "\uD83C\uDFF3\uFE0F Abandonner la partie (effac\xE9e)"))));
-}
+  function RulePopup({
+    rule,
+    onClose
+  }) {
+    const r = RULES_HELP[rule];
+    if (!r) return null;
+    return h(Sheet, {
+      labelledBy: "rule-dialog-title",
+      onClose
+    }, h("div", {
+      className: "sheet-head"
+    }, h("div", {
+      id: "rule-dialog-title",
+      className: "sheet-title"
+    }, r.title), h("button", {
+      type: "button",
+      className: "sheet-close",
+      "aria-label": "Fermer l'aide",
+      onClick: onClose
+    }, h(Icon, {
+      name: "x"
+    }))), r.blocks.map(([title, text]) => h("div", {
+      key: title,
+      className: "rule-block"
+    }, h("h3", null, title), h("p", null, text))), h("div", {
+      className: "sheet-actions"
+    }, h("button", {
+      type: "button",
+      className: "btn btn-primary btn-block",
+      onClick: onClose
+    }, "Compris")));
+  }
+
+  function EventPopup({
+    popup,
+    onClose
+  }) {
+    const {
+      type,
+      teamName,
+      teamColor,
+      data
+    } = popup;
+    const penaltyText = data.mode === '0' ? 'Le score retombe à 0.' : data.mode === 'half' ? 'Le score retombe à la moitié.' : 'Le score retombe à 25, comme le veut la règle.';
+    const cfgs = {
+      overflow_penalized: {
+        tone: 'danger',
+        title: `${teamName} dépasse ${data.targetScore}`,
+        facts: [['Score atteint', data.scoreBefore], ['Nouveau score', data.newScore]],
+        text: penaltyText,
+        tip: `Il faut maintenant marquer exactement ${data.targetScore - data.newScore} points.`
+      },
+      overflow_grace: {
+        tone: 'warn',
+        title: `${teamName} dépasse ${data.targetScore}`,
+        facts: [['Lancer', `${data.scoreBefore} + ${data.score} = ${data.scoreBefore + data.score}`], ['Score conservé', data.scoreBefore], ['Essais de grâce restants', `${data.remaining} sur ${data.graceTotal}`]],
+        text: 'Essai de grâce : le score ne bouge pas.',
+        tip: data.remaining > 0 ? `Encore ${data.remaining} essai${data.remaining > 1 ? 's' : ''} avant la pénalité.` : 'Prochain dépassement : pénalité.'
+      },
+      eliminated: {
+        tone: 'danger',
+        title: `${teamName} est éliminée`,
+        facts: [['Ratés consécutifs', `${data.misses} sur ${data.limit || 3}`]],
+        text: `Une équipe qui rate ${data.limit || 3} lancers de suite est éliminée.`,
+        tip: data.winnerName ? `${data.winnerName} remporte la partie.` : 'Les autres équipes continuent.'
+      }
+    };
+    const cfg = cfgs[type];
+    if (!cfg) return null;
+    return h(Sheet, {
+      labelledBy: "event-dialog-title",
+      onClose,
+      tone: cfg.tone
+    }, h("div", {
+      className: "sheet-head"
+    }, h("div", {
+      id: "event-dialog-title",
+      className: "sheet-title",
+      style: {
+        color: teamColor
+      }
+    }, cfg.title)), h("ul", {
+      className: "fact-list"
+    }, cfg.facts.map(([label, value]) => h("li", {
+      key: label
+    }, h("span", null, label), h("strong", {
+      className: "num"
+    }, value)))), h("p", {
+      className: "sheet-text",
+      style: {
+        marginTop: '12px'
+      }
+    }, cfg.text), cfg.tip && h("div", {
+      className: "tip"
+    }, cfg.tip), h("div", {
+      className: "sheet-actions"
+    }, h("button", {
+      type: "button",
+      className: "btn btn-primary btn-block btn-lg",
+      onClick: onClose
+    }, "OK, continuer")));
+  }
+
+  function AbandonModal({
+    teams,
+    onClose,
+    onSameTeams,
+    onPause,
+    onAbandon
+  }) {
+    return h(Sheet, {
+      labelledBy: "abandon-dialog-title",
+      onClose
+    }, h("div", {
+      className: "sheet-head"
+    }, h("div", null, h("div", {
+      id: "abandon-dialog-title",
+      className: "sheet-title"
+    }, "Partie en pause"), h("div", {
+      className: "sheet-sub"
+    }, "La partie est sauvegard\xE9e automatiquement."))), h("div", {
+      className: "pause-scores"
+    }, teams.map((t, i) => h("span", {
+      key: i,
+      className: "pause-score"
+    }, h("span", {
+      className: "dot",
+      style: {
+        '--team': t.color
+      }
+    }), t.name, h("span", {
+      className: "num"
+    }, t.score)))), h("div", {
+      className: "sheet-actions"
+    }, h("button", {
+      type: "button",
+      className: "btn btn-primary btn-block btn-lg",
+      onClick: onClose
+    }, h(Icon, {
+      name: "play"
+    }), "Reprendre la partie"), h("button", {
+      type: "button",
+      className: "btn btn-secondary btn-block",
+      onClick: onPause
+    }, h(Icon, {
+      name: "home"
+    }), "Retour \xE0 l'accueil"), h("button", {
+      type: "button",
+      className: "btn btn-secondary btn-block",
+      onClick: onSameTeams
+    }, h(Icon, {
+      name: "refresh"
+    }), "Recommencer la partie"), h("button", {
+      type: "button",
+      className: "btn btn-danger btn-block",
+      onClick: onAbandon
+    }, h(Icon, {
+      name: "flag"
+    }), "Abandonner la partie")));
+  }
 
   return {
     RulePopup,

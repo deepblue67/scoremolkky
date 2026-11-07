@@ -1,47 +1,55 @@
 @font-face {
-  font-family: 'Fredoka One';
+  font-family: 'Barlow';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('./fonts/fredoka-one-400.ttf') format('truetype');
+  src: url('./fonts/barlow-latin-400-normal.woff2') format('woff2');
 }
 
 @font-face {
-  font-family: 'Nunito';
+  font-family: 'Barlow';
   font-style: normal;
-  font-weight: 400;
+  font-weight: 500;
   font-display: swap;
-  src: url('./fonts/nunito-400.ttf') format('truetype');
+  src: url('./fonts/barlow-latin-500-normal.woff2') format('woff2');
 }
 
 @font-face {
-  font-family: 'Nunito';
+  font-family: 'Barlow';
   font-style: normal;
   font-weight: 600;
   font-display: swap;
-  src: url('./fonts/nunito-600.ttf') format('truetype');
+  src: url('./fonts/barlow-latin-600-normal.woff2') format('woff2');
 }
 
 @font-face {
-  font-family: 'Nunito';
+  font-family: 'Barlow';
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url('./fonts/nunito-700.ttf') format('truetype');
+  src: url('./fonts/barlow-latin-700-normal.woff2') format('woff2');
 }
 
 @font-face {
-  font-family: 'Nunito';
+  font-family: 'Barlow Condensed';
   font-style: normal;
-  font-weight: 800;
+  font-weight: 500;
   font-display: swap;
-  src: url('./fonts/nunito-800.ttf') format('truetype');
+  src: url('./fonts/barlow-condensed-latin-500-normal.woff2') format('woff2');
 }
 
 @font-face {
-  font-family: 'Nunito';
+  font-family: 'Barlow Condensed';
   font-style: normal;
-  font-weight: 900;
+  font-weight: 600;
   font-display: swap;
-  src: url('./fonts/nunito-900.ttf') format('truetype');
+  src: url('./fonts/barlow-condensed-latin-600-normal.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Barlow Condensed';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('./fonts/barlow-condensed-latin-700-normal.woff2') format('woff2');
 }

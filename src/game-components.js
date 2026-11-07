@@ -1,14 +1,16 @@
 (function (root, factory) {
-  const gameComponents = factory(root.React, root.MolkkyConstants);
+  const gameComponents = factory(root.React, root.MolkkyConstants, root.MolkkyComponents);
 
   if (typeof module === 'object' && module.exports) {
     module.exports = gameComponents;
   }
 
   root.MolkkyGameComponents = gameComponents;
-})(typeof globalThis !== 'undefined' ? globalThis : this, function (React, constants) {
+})(typeof globalThis !== 'undefined' ? globalThis : this, function (React, constants, components) {
   const { SORTED_PINS } = constants;
-  const { useEffect, useRef } = React;
+  const { Icon, Sheet } = components;
+  const h = React ? React.createElement : null;
+  const { useEffect, useRef, useState } = React || {};
 
   function MatchHistorySheet({
     throws,
@@ -39,55 +41,68 @@
       return 'normal';
     }
 
-    return React.createElement("div", {
-      className: "match-history-overlay",
-      onClick: onClose
-    }, React.createElement("div", {
-      className: "match-history-sheet",
-      role: "dialog",
-      "aria-modal": "true",
-      "aria-labelledby": "match-history-title",
-      onClick: e => e.stopPropagation()
-    }, React.createElement("div", {
-      className: "match-history-header"
-    }, React.createElement("div", null, React.createElement("div", {
+    return h(Sheet, {
+      labelledBy: "match-history-title",
+      onClose,
+      className: "match-history-sheet"
+    }, h("div", {
+      className: "sheet-head"
+    }, h("div", null, h("div", {
       id: "match-history-title",
-      className: "match-history-title"
-    }, "Coups joués"), React.createElement("div", {
-      className: "match-history-subtitle"
-    }, throws.length, " coup", throws.length > 1 ? 's' : '', " dans cette partie")), React.createElement("button", {
+      className: "sheet-title"
+    }, "Coups jou\xE9s"), h("div", {
+      className: "sheet-sub"
+    }, throws.length, " coup", throws.length > 1 ? 's' : '', " dans cette partie")), h("button", {
       type: "button",
-      className: "match-history-close",
+      className: "sheet-close",
       "aria-label": "Fermer l'historique des coups",
       onClick: onClose
-    }, "\u00D7")), throws.length === 0 ? React.createElement("div", {
+    }, h(Icon, {
+      name: "x"
+    }))), throws.length === 0 ? h("div", {
       className: "match-history-empty"
-    }, "Aucun coup joué pour l'instant.") : React.createElement("div", {
+    }, "Aucun coup jou\xE9 pour l'instant.") : h("div", {
       className: "match-history-list"
-    }, sortedRounds.map(round => React.createElement("section", {
+    }, sortedRounds.map(round => h("section", {
       key: round,
       className: "match-history-round"
-    }, React.createElement("div", {
+    }, h("div", {
       className: "match-history-round-title"
     }, "Round ", round), rounds[round].map(entry => {
       const team = teams[entry.teamIdx] || entry.teamBefore || {};
       const scoreAfter = entry.scoreAfter !== undefined ? entry.scoreAfter : entry.scoreBefore;
-      return React.createElement("div", {
+      return h("div", {
         key: `${round}-${entry.displayIndex}`,
-        className: `match-history-row ${eventClass(entry)}`,
-        style: {
-          '--team-color': team.color || '#c8854a'
-        }
-      }, React.createElement("div", {
+        className: `match-history-row ${eventClass(entry)}`
+      }, h("div", {
         className: "match-history-team"
-      }, React.createElement("span", {
-        className: "match-history-dot"
-      }), React.createElement("span", null, team.name || `Équipe ${entry.teamIdx + 1}`)), React.createElement("div", {
+      }, h("span", {
+        className: "dot",
+        style: {
+          '--team': team.color
+        }
+      }), h("span", null, team.name || `Équipe ${entry.teamIdx + 1}`)), h("div", {
         className: "match-history-event"
-      }, React.createElement("strong", null, eventLabel(entry)), React.createElement("span", null, entry.miss ? `Score ${entry.scoreBefore}` : `${entry.scoreBefore} → ${scoreAfter}`)), React.createElement("div", {
-        className: "match-history-points"
-      }, entry.miss ? "\u2717" : `+${entry.points}`));
-    }))))));
+      }, h("strong", null, eventLabel(entry)), h("span", null, entry.miss ? `Score ${entry.scoreBefore}` : `${entry.scoreBefore} → ${scoreAfter}`)), h("div", {
+        className: "match-history-points num"
+      }, entry.miss ? "✗" : `+${entry.points}`));
+    })))));
+  }
+
+  function MissDots({
+    misses,
+    limit
+  }) {
+    const isLast = misses === limit - 1;
+    return h("span", {
+      className: `misses ${isLast ? 'is-last' : ''}`,
+      "aria-label": `${misses} raté${misses > 1 ? 's' : ''} sur ${limit}`
+    }, Array.from({
+      length: limit
+    }).map((_, j) => h("span", {
+      key: j,
+      className: `miss-dot ${j < misses ? 'filled' : ''}`
+    })));
   }
 
   function GameScoreboard({
@@ -96,85 +111,44 @@
     targetScore,
     rules,
   }) {
-    const scoreboardRef = useRef(null);
     const activeRules = rules || {
       eliminationOn: true,
       missLimit: 3,
     };
 
-    useEffect(() => {
-      const board = scoreboardRef.current;
-      if (!board) return;
-      const activeCard = board.querySelector(`[data-team-index="${currentTeamIdx}"]`);
-      if (activeCard && typeof activeCard.scrollIntoView === 'function') {
-        activeCard.scrollIntoView({
-          behavior: 'smooth',
-          block: 'nearest',
-          inline: 'center',
-        });
-      }
-    }, [currentTeamIdx, teams.length]);
-
-    return React.createElement("div", {
+    return h("div", {
       className: "scoreboard",
-      ref: scoreboardRef
+      "data-count": teams.length
     }, teams.map((team, i) => {
       const remaining = targetScore - team.score;
       const isPlayable = remaining > 0 && remaining <= 12;
-      return React.createElement("div", {
-      key: i,
-      "data-team-index": i,
-      className: `team-score-card ${i === currentTeamIdx ? 'active' : ''} ${team.eliminated ? 'eliminated' : ''}`
-    }, i === currentTeamIdx && React.createElement("div", {
-      className: "active-arrow"
-    }, "\u25BC"), team.eliminated && React.createElement("div", {
-      className: "elim-badge"
-    }, "\u274C"), React.createElement("div", {
-      className: "team-score-top"
-    }, React.createElement("div", {
-      className: "team-name-label",
-      style: {
-        color: team.color
-      }
-    }, team.name), isPlayable && React.createElement("div", {
-      className: "team-playable-badge",
-      style: {
-        color: team.color,
-        borderColor: `${team.color}66`,
-        background: `${team.color}18`
-      }
-    }, "jouable")), React.createElement("div", {
-      className: "team-score-metrics"
-    }, React.createElement("div", {
-      className: "team-score-metric"
-    }, React.createElement("div", {
-      className: "team-score-metric-label"
-    }, "Score"), React.createElement("div", {
-      className: "team-score-value team-score-current-value"
-    }, team.score)), React.createElement("div", {
-      className: `team-score-metric team-score-metric-remain ${isPlayable ? 'playable' : ''}`,
-      style: {
-        '--team-color': team.color
-      }
-    }, React.createElement("div", {
-      className: "team-score-metric-label"
-    }, "Reste"), React.createElement("div", {
-      className: "team-score-value team-score-remain-value"
-    }, remaining))), team.overflowStrikes > 0 && React.createElement("div", {
-      style: {
-        fontSize: '10px',
-        color: '#f39c12',
-        fontWeight: '800',
-        marginTop: '3px'
-      }
-    }, "\u26A0\uFE0F ", '💥'.repeat(team.overflowStrikes)), !team.eliminated && activeRules.eliminationOn && React.createElement("div", {
-      className: "miss-indicator"
-    }, Array.from({
-      length: activeRules.missLimit || 3
-    }).map((_, j) => React.createElement("div", {
-      key: j,
-      className: `miss-dot ${j < team.misses ? 'filled' : ''}`
-    }))));
+      const isActive = i === currentTeamIdx;
+      return h("div", {
+        key: i,
+        "data-team-index": i,
+        "aria-current": isActive ? 'true' : undefined,
+        className: `score-tile team-score-card ${isActive ? 'is-active active' : ''} ${team.eliminated ? 'is-out eliminated' : ''} ${isPlayable ? 'is-playable' : ''}`,
+        style: {
+          '--team': team.color
+        }
+      }, h("div", {
+        className: "tile-head"
+      }, h("span", {
+        className: "tile-name"
+      }, team.name), team.eliminated ? h("span", {
+        className: "tile-status"
+      }, "\xE9limin\xE9e") : activeRules.eliminationOn && h(MissDots, {
+        misses: team.misses || 0,
+        limit: activeRules.missLimit || 3
+      })), h("div", {
+        className: "tile-body"
+      }, h("span", {
+        className: "tile-score num team-score-current-value"
+      }, team.score), h("span", {
+        className: "tile-remain"
+      }, "reste", h("span", {
+        className: "num"
+      }, remaining))));
     }));
   }
 
@@ -186,6 +160,7 @@
     willOverflow,
     overflowLabel,
     displayAfter,
+    targetScore,
     throwHistory,
     teams,
     canUndo,
@@ -197,121 +172,116 @@
     onConfirmThrow,
     onAbandon,
   }) {
-    const [historyOpen, setHistoryOpen] = React.useState(false);
+    const [historyOpen, setHistoryOpen] = useState(false);
     const hasSelection = selectedPins.length > 0;
     const playedCount = (throwHistory || []).length;
-    const selectedLabel = hasSelection ? selectedPins.length === 1 ? `Quille ${selectedPins[0]}` : `${selectedPins.length} quilles` : 'Aucune quille';
-    return React.createElement("div", {
-      className: "game-main",
-      style: {
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-        minHeight: 0
-      }
-    }, React.createElement("div", {
-      className: "current-turn"
-    }, React.createElement("div", {
+    const selectedLabel = hasSelection ? selectedPins.length === 1 ? `Quille ${selectedPins[0]}` : `${selectedPins.length} quilles` : 'Ce lancer';
+    const afterLabel = hasSelection && willOverflow ? overflowLabel : 'Apr\xE8s';
+    const wins = hasSelection && !willOverflow && displayAfter === targetScore;
+    return h("div", {
+      className: "game-main"
+    }, h("div", {
+      className: "turnbar"
+    }, h("div", {
       className: "turn-label"
-    }, React.createElement("span", {
+    }, h("span", {
       className: "turn-prefix"
-    }, "Tour de "), React.createElement("span", {
+    }, "Tour de "), h("span", {
       className: "turn-team-name",
       style: {
         color: currentTeam.color
       }
-    }, currentTeam.name), React.createElement("span", {
-      className: "turn-round-badge"
-    }, "Round ", round)), React.createElement("button", {
+    }, currentTeam.name), h("span", {
+      className: "turn-round"
+    }, " \xB7 round ", round)), h("button", {
       type: "button",
-      className: "match-history-access-btn",
+      className: "history-btn",
       "aria-label": `Afficher l'historique des coups, ${playedCount} coups joués`,
       onClick: () => setHistoryOpen(true)
-    }, React.createElement("span", {
-      className: "match-history-access-icon",
-      "aria-hidden": "true"
-    }, "\u2630"), React.createElement("span", {
-      className: "match-history-access-count"
-    }, playedCount))), React.createElement("div", {
-      className: "score-preview-bar"
-    }, React.createElement("div", {
+    }, h(Icon, {
+      name: "list",
+      size: 18
+    }), h("span", {
+      className: "num"
+    }, playedCount))), h("div", {
+      className: "preview-wrap"
+    }, h("div", {
       className: `toast ${toast && toast.show ? 'show' : ''}`,
       role: "status",
       "aria-live": "polite"
-    }, toast ? toast.msg : ''), React.createElement("div", {
-      className: `score-preview-inner ${hasSelection ? 'has-selection' : ''}`
-    }, React.createElement("div", {
-      className: "score-col score-col-side"
-    }, React.createElement("span", {
-      className: "score-col-label"
-    }, "Mon score"), React.createElement("span", {
-      className: "score-col-value"
-    }, currentTeam.score)), React.createElement("div", {
-      className: "score-col score-col-main"
-    }, React.createElement("span", {
-      className: "score-col-label"
-    }, selectedLabel), React.createElement("span", {
-      className: `score-col-value throw-value ${hasSelection ? 'active' : ''}`
-    }, hasSelection ? `+${throwScore}` : '\u2014')), React.createElement("div", {
-      className: "score-col score-col-side"
-    }, React.createElement("span", {
-      className: "score-col-label"
-    }, hasSelection && willOverflow ? overflowLabel : 'Apr\xE8s'), React.createElement("span", {
-      className: `score-col-value ${hasSelection ? willOverflow ? 'overflow' : 'after' : ''}`
-    }, hasSelection ? displayAfter : '\u2014')))), React.createElement("div", {
+    }, toast ? toast.msg : ''), h("div", {
+      className: `preview ${hasSelection ? 'has-selection' : ''}`
+    }, h("div", {
+      className: "preview-col"
+    }, h("span", {
+      className: "preview-label"
+    }, "Score"), h("span", {
+      className: "preview-value num"
+    }, currentTeam.score)), h("div", {
+      className: "preview-col preview-col-main"
+    }, h("span", {
+      className: "preview-label"
+    }, selectedLabel), h("span", {
+      className: "preview-value num"
+    }, hasSelection ? `+${throwScore}` : '—')), h("div", {
+      className: "preview-col"
+    }, h("span", {
+      className: "preview-label"
+    }, wins ? 'Victoire' : afterLabel), h("span", {
+      className: `preview-value num score-col-value ${hasSelection ? willOverflow ? 'is-overflow overflow' : wins ? 'is-win' : 'is-after' : ''}`
+    }, hasSelection ? displayAfter : '—')))), h("div", {
       className: "pins-grid-container"
-    }, React.createElement("div", {
-      className: "pins-grid"
-    }, SORTED_PINS.map(pin => React.createElement("button", {
+    }, h("div", {
+      className: "pins-grid",
+      style: {
+        '--team': currentTeam.color
+      }
+    }, SORTED_PINS.map(pin => h("button", {
       key: pin,
-      className: `pin-btn ${selectedPins.includes(pin) ? 'selected' : ''}`,
+      type: "button",
+      className: `wood-disc pin-btn num ${selectedPins.includes(pin) ? 'selected' : ''}`,
       "aria-pressed": selectedPins.includes(pin),
       "aria-label": `Quille ${pin}`,
       disabled: locked,
       onClick: () => onTogglePin(pin)
-    }, React.createElement("span", {
-      className: "check-mark",
-      "aria-hidden": "true"
-    }, "\u2713"), pin)))), React.createElement("div", {
+    }, pin)))), h("div", {
       className: "miss-bar"
-    }, React.createElement("button", {
+    }, h("button", {
+      type: "button",
       className: "miss-bar-btn",
       "aria-label": "Valider un lancer rat\xE9 sans quille renvers\xE9e",
       disabled: locked,
       onClick: onConfirmMiss
-    }, "\u2717 \xA0 Rat\xE9")), React.createElement("div", {
+    }, h(Icon, {
+      name: "x"
+    }), "Rat\xE9", h("small", null, "aucune quille"))), h("div", {
       className: "bottom-action-row"
-    }, React.createElement("button", {
-      className: "abandon-btn",
+    }, h("button", {
+      type: "button",
+      className: "side-btn",
       "aria-label": "Annuler le dernier lancer",
       onClick: onUndoLast,
-      disabled: !canUndo,
-      style: {
-        opacity: canUndo ? 1 : 0.25,
-        borderColor: 'rgba(255,255,255,0.15)',
-        color: 'rgba(255,255,255,0.55)',
-        background: 'rgba(255,255,255,0.06)'
-      }
-    }, React.createElement("span", {
-      className: "abandon-btn-icon"
-    }, "\u21A9"), React.createElement("span", {
-      className: "abandon-btn-label"
-    }, "Annuler")), React.createElement("button", {
+      disabled: !canUndo
+    }, h(Icon, {
+      name: "undo"
+    }), "Annuler"), h("button", {
+      type: "button",
       className: "validate-btn",
       "aria-label": "Valider le lancer s\xE9lectionn\xE9",
       disabled: locked || selectedPins.length === 0,
       onClick: onConfirmThrow
-    }, "\u2713  Valider"), React.createElement("button", {
-      className: "abandon-btn",
+    }, h(Icon, {
+      name: "check",
+      size: 22
+    }), "Valider"), h("button", {
+      type: "button",
+      className: "side-btn",
       "aria-label": "Mettre la partie en pause",
       disabled: locked,
       onClick: onAbandon
-    }, React.createElement("span", {
-      className: "abandon-btn-icon"
-    }, "\u23F8"), React.createElement("span", {
-      className: "abandon-btn-label"
-    }, "Pause"))), historyOpen && React.createElement(MatchHistorySheet, {
+    }, h(Icon, {
+      name: "pause"
+    }), "Pause")), historyOpen && h(MatchHistorySheet, {
       throws: throwHistory || [],
       teams: teams || [],
       onClose: () => setHistoryOpen(false)

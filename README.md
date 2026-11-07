@@ -8,8 +8,8 @@ Il sert a deux usages :
 - permettre a une future intervention Codex de reprendre vite, sans redecouvrir toute l'architecture.
 
 Date de mise a jour du README : 2026-11-07.
-Version documentee de l'application : `V20261107_1205`.
-Derniere validation connue : `npm run build V20261107_1205`, puis `npm test`.
+Version documentee de l'application : `V20261107_1225`.
+Derniere validation connue : `npm run build V20261107_1225`, puis `npm test`.
 
 ## Resume court
 
@@ -25,6 +25,20 @@ Le projet est maintenant decoupe en modules, avec :
 - une PWA autonome avec React local, polices locales, icones, manifest et service worker ;
 - des tests unitaires et fonctionnels ;
 - une version de livraison synchronisee dans `index.html`, `sw.js`, `src/app.js` et `app.js`.
+
+## Charte visuelle (depuis `V20261107_1225`)
+
+Un seul theme sombre pour toute l'application : epicea le soir et bois de bouleau, les materiaux du vrai jeu.
+
+- Couleurs : jetons CSS dans `styles.css` (`:root`) : fond `--bg` #0F2219, surfaces `--surface-1..3`, texte `--text` #F1EADB (bouleau), `--text-2`, `--text-3`, bois `--wood*`, signaux `--danger`, `--warn`, `--ok`.
+- Couleurs d'equipe (`constants.js`) : rouge, bleu, jaune, violet, turquoise, rose. Pas de vert, pour rester lisible sur le fond.
+- Polices : Barlow pour le texte, Barlow Condensed pour les chiffres et les titres (chiffres a largeur fixe via la classe `.num`).
+- Element signature : les quilles en disques de bois vus du dessus (`.wood-disc`). Une quille selectionnee tombe : disque sombre + anneau a la couleur de l'equipe qui joue.
+- Action principale : bouton bouleau clair (`.btn-primary`, `.validate-btn`), tres contraste en plein soleil.
+- Fenetres : un seul composant `Sheet` (`components.js`) pour l'aide, les evenements de partie, la pause et l'historique des coups.
+- Icones : SVG en ligne (`Icon` dans `components.js`), plus d'emojis dans l'interface.
+- Regles : aucun texte sous 12 px, cibles tactiles de 44 px minimum, focus clavier visible, animations reduites si le systeme le demande.
+- Plus de styles en ligne dans le JS, sauf les couleurs d'equipe passees en variable CSS `--team`.
 
 ## Fonctionnement utilisateur
 
@@ -182,7 +196,7 @@ Ces fichiers sont servis par GitHub Pages et doivent etre publies.
 - `styles.css` : styles applicatifs.
 - `fonts.css` : declaration des polices locales.
 - `vendor/` : React local.
-- `fonts/` : polices locales.
+- `fonts/` : polices locales Barlow et Barlow Condensed (woff2, licence SIL OFL dans `fonts/OFL-Barlow.txt`).
 - `icons/` : icones PWA.
 
 ## Service worker et version
@@ -190,7 +204,7 @@ Ces fichiers sont servis par GitHub Pages et doivent etre publies.
 La version courante est :
 
 ```text
-V20261107_1205
+V20261107_1225
 ```
 
 Elle est synchronisee dans :
@@ -219,7 +233,7 @@ npm run build VYYYYMMDD_HHMM
 Exemple :
 
 ```bash
-npm run build V20261107_1205
+npm run build V20261107_1225
 ```
 
 ## Commandes
@@ -411,6 +425,7 @@ npm test
 | V20260619_2314 | Compactage mobile de l'accueil pour afficher les actions sans scroll et stabilisation de la saisie des equipes sur petits ecrans. |
 | V20260619_2350 | Nouvelle livraison cache/PWA apres ajustement CSS final, pour forcer la mise a jour du service worker. |
 | V20260622_1407 | Scoreboard de partie scrollable horizontalement avec cartes lisibles pour 3 equipes et plus ; historique des coups affiche du Round 1 vers les rounds suivants. |
+| V20261107_1225 | Lot 2 refonte visuelle : theme sombre unique (epicea + bouleau), polices Barlow/Barlow Condensed en woff2 locales a la place de Fredoka One/Nunito, quilles en disques de bois, tableau des scores avec toutes les equipes visibles (jusqu'a 6, sans defilement), icones SVG au lieu des emojis, fenetres unifiees, classement complet sur l'ecran de victoire, confirmation avant suppression d'une partie de l'historique, moyenne par lancer identique partout, styles en ligne remplaces par des classes CSS. |
 | V20261107_1205 | Lot 1 corrections : quilles qui recouvraient Rate (taille adaptee a la place disponible), toast deplace sur l'apercu, bouton Coups joues dans la barre du tour, apercu correct avec essais de grace, handicap borne sous la cible, handicap conserve en recommencant, menu Pause (retour accueil sans perte), partie verrouillee apres victoire, lancer vide refuse, couleurs uniques, noms d'equipes uniques, gagnant memorise par drapeau, rates N/N a l'elimination, service worker reseau d'abord + installation atomique, nettoyage CSS, Playwright en devDependency. |
 
 ## Comment maintenir ce README
@@ -435,7 +450,7 @@ Les tableaux ci-dessous sont le suivi officiel.
 | Assets locaux | Ajouter React, polices, icones et manifest localement. | Fait | Haute | Necessaire pour PWA autonome. |
 | Extraction CSS | Sortir les styles de `index.html` vers `styles.css`. | Fait | Haute | Rend `index.html` maintenable. |
 | Build workflow | Ajouter `scripts/build.js` et synchroniser les fichiers generes. | Fait | Haute | Commande : `npm run build`. |
-| Version PWA | Synchroniser `APP_VERSION` entre `index.html`, `sw.js`, `src/app.js`, `app.js`. | Fait | Haute | Version actuelle `V20261107_1205`. |
+| Version PWA | Synchroniser `APP_VERSION` entre `index.html`, `sw.js`, `src/app.js`, `app.js`. | Fait | Haute | Version actuelle `V20261107_1225`. |
 | Service worker | Mettre en cache les assets locaux et permettre reload offline. | Fait | Haute | Teste via Playwright. |
 | Decoupage `rules.js` | Extraire les regles pures du Molkky. | Fait | Haute | Teste par `test:rules`. |
 | Decoupage `storage.js` | Extraire la persistance `localStorage`. | Fait | Haute | Teste par `test:storage`. |
@@ -454,7 +469,7 @@ Les tableaux ci-dessous sont le suivi officiel.
 | Test mobile/accessibilite | Automatiser controles viewport mobile, focus, cibles tactiles et clavier. | Fait | Haute | Suite `test:a11y-mobile`, ajoutee en `V20260619_1819`. |
 | Ecran de jeu compact | Reequilibrer les zones de score, tour, quilles et actions sur mobile. | Fait | Haute | Grille 4x3 en portrait, ajout en `V20260619_1850`. |
 | Historique coups en cours | Remplacer la ligne recente par une vue lisible de tous les coups de la partie. | Fait | Haute | Bottom sheet `Coups joues`, ajoutee en `V20260619_2008`. |
-| Scoreboard multi-equipes | Garder des cartes lisibles et permettre le scroll horizontal quand il y a plus de 2 equipes. | Fait | Haute | Ajoute en `V20260622_1407`, test fonctionnel 5 equipes. |
+| Scoreboard multi-equipes | Toutes les equipes visibles en meme temps, sans defilement (grille 2 colonnes). | Fait | Haute | Refait en `V20261107_1225`, test fonctionnel 6 equipes. |
 | Ergonomie mobile accueil/setup | Faire tenir les actions d'accueil sans scroll et supprimer les debordements horizontaux de configuration. | Fait | Haute | Ajoute en `V20260619_2314`. |
 | Lot 1 corrections | Bugs de regles, de mise en page mobile et de service worker releves a l'audit du 2026-11-07. | Fait | Haute | `V20261107_1205`, tests de non-regression ajoutes. |
 | Effets de bord React | Sortir timers/toasts des fonctions `setState` ; etat lu via une ref synchrone. | Fait | Haute | `V20261107_1205`. |
@@ -463,7 +478,7 @@ Les tableaux ci-dessous sont le suivi officiel.
 | Extraire historique/stats | Sortir `HistoryScreen`, `GameDetailScreen`, `PlayerStatsScreen`. | A faire | Moyenne | Bon prochain chantier structurel. |
 | Extraire settings/home | Sortir `SettingsScreen` et `HomeScreen`. | Moyen terme | Moyenne | Nettoyage de lisibilite. |
 | Refondre en bundler moderne | Passer a Vite/React modules ES. | A eviter pour l'instant | Basse | Trop gros changement avant besoin reel. |
-| Refonte complete UI | Repenser toute l'interface. | A eviter pour l'instant | Basse | Risque eleve, valeur faible a court terme. |
+| Refonte visuelle | Theme unique, typo, quilles, ecrans sans styles en ligne. | Fait | Haute | Lot 2, `V20261107_1225`. |
 | Tests accessibilite | Ajouter controles focus/clavier/contrastes. | Partiel | Moyenne | Focus/clavier/cibles tactiles automatises ; contrastes a approfondir. |
 | Audit mobile reel | Tester installation mobile et offline sur telephone. | A faire | Haute | Complement manuel aux tests Playwright mobile. |
 
