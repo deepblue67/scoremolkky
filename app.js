@@ -33,13 +33,26 @@ const {
   saveLastSetup,
   collectKnownNames
 } = MolkkyStorage;
-const APP_VERSION = 'V20261107_1255';
+const APP_VERSION = 'V20261107_1305';
 const {
   FieldDiagram,
   Icon,
   Toggle,
-  ChipSelect
+  ChipSelect,
+  Sheet
 } = MolkkyComponents;
+const {
+  buildExport,
+  encodeExport,
+  exportFileContent,
+  exportFileName,
+  decodeImport,
+  summarize: summarizeTransfer,
+  applyImport
+} = MolkkyTransfer;
+const {
+  GuideScreen
+} = MolkkyGuide;
 const h = React.createElement;
 const {
   GameScoreboard,
@@ -950,12 +963,280 @@ function HistoryScreen({
   })))) : null));
 }
 
+function plural(n, word) {
+  return `${n} ${word}${n > 1 ? 's' : ''}`;
+}
+function NavRow({
+  icon,
+  label,
+  sub,
+  onClick
+}) {
+  return h("button", {
+    type: "button",
+    className: "nav-row",
+    onClick
+  }, h("span", {
+    className: "nav-row-icon"
+  }, h(Icon, {
+    name: icon,
+    size: 22
+  })), h("span", {
+    className: "nav-row-text"
+  }, h("span", {
+    className: "row-label"
+  }, label), h("span", {
+    className: "row-sub"
+  }, sub)), h(Icon, {
+    name: "chevron",
+    size: 18,
+    className: "nav-row-chevron"
+  }));
+}
+function ExportSheet({
+  onClose
+}) {
+  const payload = useMemo(() => buildExport(localStorage, APP_VERSION), []);
+  const code = useMemo(() => encodeExport(payload), [payload]);
+  const summary = summarizeTransfer(payload);
+  const [status, setStatus] = useState('');
+  const codeRef = useRef(null);
+  function copyCode() {
+    const done = () => setStatus('Code copié. Colle-le sur l’autre appareil, dans Réglages > Importer des données.');
+    const fallback = () => {
+      try {
+        codeRef.current.select();
+        document.execCommand('copy');
+        done();
+      } catch (err) {
+        setStatus('Copie impossible : sélectionne le code à la main.');
+      }
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(done, fallback);else fallback();
+  }
+  function shareCode() {
+    navigator.share({
+      title: 'Mölkky Score : mes données',
+      text: code
+    }).catch(() => {});
+  }
+  function sendFile() {
+    const content = exportFileContent(payload);
+    const name = exportFileName();
+    const blob = new Blob([content], {
+      type: 'application/json'
+    });
+    const file = typeof File === 'function' ? new File([blob], name, {
+      type: 'application/json'
+    }) : null;
+    if (file && navigator.canShare && navigator.canShare({
+      files: [file]
+    })) {
+      navigator.share({
+        files: [file],
+        title: 'Mölkky Score : mes données'
+      }).catch(() => {});
+      return;
+    }
+    // Pas de partage de fichier : téléchargement classique.
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = name;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    setStatus(`Fichier ${name} enregistré.`);
+  }
+  return h(Sheet, {
+    labelledBy: "export-title",
+    onClose
+  }, h("div", {
+    className: "sheet-head"
+  }, h("div", null, h("div", {
+    id: "export-title",
+    className: "sheet-title"
+  }, "Exporter mes donn\xE9es"), h("div", {
+    className: "sheet-sub"
+  }, plural(summary.games, 'partie'), " \xB7 ", plural(summary.people, 'joueur'), summary.hasCurrentGame ? ' · 1 partie en cours' : '')), h("button", {
+    type: "button",
+    className: "sheet-close",
+    "aria-label": "Fermer l'export",
+    onClick: onClose
+  }, h(Icon, {
+    name: "x"
+  }))), h("p", {
+    className: "sheet-text"
+  }, "Copie ce code ou envoie le fichier \xE0 l'autre appareil (iPhone, iPad, ordinateur)."), h("textarea", {
+    ref: codeRef,
+    className: "code-box",
+    readOnly: true,
+    value: code,
+    "aria-label": "Code d'export",
+    onFocus: e => e.target.select()
+  }), status && h("p", {
+    className: "sheet-status",
+    role: "status"
+  }, status), h("div", {
+    className: "sheet-actions"
+  }, h("button", {
+    type: "button",
+    className: "btn btn-primary btn-block btn-lg",
+    onClick: copyCode
+  }, h(Icon, {
+    name: "copy"
+  }), "Copier le code"), typeof navigator.share === 'function' && h("button", {
+    type: "button",
+    className: "btn btn-secondary btn-block",
+    onClick: shareCode
+  }, h(Icon, {
+    name: "share"
+  }), "Partager le code\u2026"), h("button", {
+    type: "button",
+    className: "btn btn-secondary btn-block",
+    onClick: sendFile
+  }, h(Icon, {
+    name: "file"
+  }), "Envoyer en fichier (AirDrop\u2026)"), h("button", {
+    type: "button",
+    className: "btn btn-quiet btn-block",
+    onClick: onClose
+  }, "Fermer")));
+}
+function ImportSheet({
+  onClose
+}) {
+  const [text, setText] = useState('');
+  const [result, setResult] = useState(null);
+  const fileRef = useRef(null);
+  let parsed = null;
+  let error = '';
+  if (text.trim()) {
+    try {
+      parsed = decodeImport(text);
+    } catch (err) {
+      error = err.message;
+    }
+  }
+  const summary = parsed ? summarizeTransfer(parsed) : null;
+  function readFile(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setText(String(reader.result || ''));
+    reader.readAsText(file);
+    event.target.value = '';
+  }
+  function run(mode) {
+    if (!parsed) return;
+    if (mode === 'replace' && !window.confirm('Remplacer toutes les données de cet appareil (historique, partie en cours, réglages) par celles importées ?')) return;
+    setResult({
+      mode,
+      ...applyImport(parsed, mode, localStorage)
+    });
+  }
+  if (result) {
+    return h(Sheet, {
+      labelledBy: "import-title",
+      onClose: () => window.location.reload()
+    }, h("div", {
+      id: "import-title",
+      className: "sheet-title"
+    }, "Import termin\xE9"), h("p", {
+      className: "sheet-text",
+      style: {
+        marginTop: '10px'
+      }
+    }, result.mode === 'replace' ? `Les données de cet appareil ont été remplacées : ${plural(result.total, 'partie')} dans l’historique.` : result.added > 0 ? `${plural(result.added, 'partie')} ajoutée${result.added > 1 ? 's' : ''}. L’historique compte maintenant ${plural(result.total, 'partie')}.` : 'Rien de nouveau : toutes ces parties étaient déjà sur cet appareil.'), h("div", {
+      className: "sheet-actions"
+    }, h("button", {
+      type: "button",
+      className: "btn btn-primary btn-block btn-lg",
+      onClick: () => window.location.reload()
+    }, "Termin\xE9")));
+  }
+  return h(Sheet, {
+    labelledBy: "import-title",
+    onClose
+  }, h("div", {
+    className: "sheet-head"
+  }, h("div", null, h("div", {
+    id: "import-title",
+    className: "sheet-title"
+  }, "Importer des donn\xE9es"), h("div", {
+    className: "sheet-sub"
+  }, "Depuis un autre appareil ou une sauvegarde")), h("button", {
+    type: "button",
+    className: "sheet-close",
+    "aria-label": "Fermer l'import",
+    onClick: onClose
+  }, h(Icon, {
+    name: "x"
+  }))), h("textarea", {
+    className: "code-box",
+    value: text,
+    placeholder: "Colle ici le code re\xE7u (il commence par MOLKKY1:)",
+    "aria-label": "Code \xE0 importer",
+    onChange: e => setText(e.target.value)
+  }), h("input", {
+    ref: fileRef,
+    type: "file",
+    accept: ".json,application/json,.txt,text/plain",
+    className: "visually-hidden",
+    tabIndex: -1,
+    "aria-hidden": "true",
+    onChange: readFile
+  }), h("button", {
+    type: "button",
+    className: "btn btn-secondary btn-block",
+    style: {
+      marginTop: '10px'
+    },
+    onClick: () => fileRef.current && fileRef.current.click()
+  }, h(Icon, {
+    name: "file"
+  }), "Choisir un fichier"), error && h("p", {
+    className: "field-error",
+    role: "alert",
+    style: {
+      marginTop: '12px'
+    }
+  }, error), summary && h("ul", {
+    className: "fact-list",
+    style: {
+      marginTop: '14px'
+    }
+  }, h("li", null, h("span", null, "Parties"), h("strong", {
+    className: "num"
+  }, summary.games)), h("li", null, h("span", null, "Joueurs"), h("strong", {
+    className: "num"
+  }, summary.people)), h("li", null, h("span", null, "Partie en cours"), h("strong", null, summary.hasCurrentGame ? 'oui' : 'non')), summary.exportedAt && h("li", null, h("span", null, "Export\xE9 le"), h("strong", null, formatDate(summary.exportedAt)))), h("div", {
+    className: "sheet-actions"
+  }, h("button", {
+    type: "button",
+    className: "btn btn-primary btn-block btn-lg",
+    disabled: !parsed,
+    onClick: () => run('merge')
+  }, h(Icon, {
+    name: "importData"
+  }), "Ajouter \xE0 mes parties"), h("button", {
+    type: "button",
+    className: "btn btn-danger btn-block",
+    disabled: !parsed,
+    onClick: () => run('replace')
+  }, "Remplacer toutes mes donn\xE9es")), h("p", {
+    className: "field-hint"
+  }, "\xAB Ajouter \xBB garde tout ce qui est sur cet appareil et ajoute seulement les parties qui manquent. \xAB Remplacer \xBB rend cet appareil identique \xE0 l'autre."));
+}
 function SettingsScreen({
   onBack,
   prefs = DEFAULT_PREFS,
   onChangePrefs = () => {}
 }) {
   const [storageSize, setStorageSize] = useState('…');
+  const [sheet, setSheet] = useState(null);
+  const [guideOpen, setGuideOpen] = useState(false);
   useEffect(() => {
     setStorageSize(formatStorageSize(estimateStorageSize()));
   }, []);
@@ -978,9 +1259,17 @@ function SettingsScreen({
       alert('Ce navigateur ne gère pas le mode hors ligne.');
     }
   }
+  if (guideOpen) return h(GuideScreen, {
+    onBack: () => setGuideOpen(false),
+    appVersion: APP_VERSION
+  });
   return h("div", {
     className: "screen"
-  }, h(Topbar, {
+  }, sheet === 'export' && h(ExportSheet, {
+    onClose: () => setSheet(null)
+  }), sheet === 'import' && h(ImportSheet, {
+    onClose: () => setSheet(null)
+  }), h(Topbar, {
     title: "R\xE9glages",
     onBack,
     backLabel: "Retour \xE0 l'accueil"
@@ -1033,6 +1322,35 @@ function SettingsScreen({
       value: 'field',
       label: 'Comme sur le terrain'
     }]
+  }))), h("section", {
+    className: "section"
+  }, h("h2", {
+    className: "section-title"
+  }, "Sauvegarde et transfert"), h("p", {
+    className: "section-note"
+  }, "Pour retrouver tes parties sur un autre appareil, ou les mettre de c\xF4t\xE9."), h("div", {
+    className: "nav-group"
+  }, h(NavRow, {
+    icon: "exportData",
+    label: "Exporter mes donn\xE9es",
+    sub: "Code texte ou fichier \xE0 envoyer",
+    onClick: () => setSheet('export')
+  }), h(NavRow, {
+    icon: "importData",
+    label: "Importer des donn\xE9es",
+    sub: "Coller le code re\xE7u ou ouvrir le fichier",
+    onClick: () => setSheet('import')
+  }))), h("section", {
+    className: "section"
+  }, h("h2", {
+    className: "section-title"
+  }, "Guide d'utilisation"), h("div", {
+    className: "nav-group"
+  }, h(NavRow, {
+    icon: "book",
+    label: "Comment utiliser l'application",
+    sub: "Guide illustr\xE9, pas \xE0 pas",
+    onClick: () => setGuideOpen(true)
   }))), h("section", {
     className: "section"
   }, h("h2", {

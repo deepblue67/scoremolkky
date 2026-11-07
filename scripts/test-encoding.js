@@ -15,6 +15,8 @@ const FILES = [
   'src/setup-screen.js',
   'src/rules.js',
   'src/storage.js',
+  'src/transfer.js',
+  'src/guide-screen.js',
   'components.js',
   'game-components.js',
   'game-state.js',

@@ -121,6 +121,15 @@ function buildStorage() {
   write(BUILT_STORAGE, read(SOURCE_STORAGE).trimEnd() + '\n');
 }
 
+// Modules ajoutés ensuite : simple copie de src/ vers la racine.
+const EXTRA_MODULES = ['transfer.js', 'guide-screen.js'];
+
+function buildExtraModules() {
+  EXTRA_MODULES.forEach(name => {
+    write(path.join(ROOT, name), read(path.join(ROOT, 'src', name)).trimEnd() + '\n');
+  });
+}
+
 function syncVersion(file, version) {
   write(file, replaceVersions(read(file), version));
 }
@@ -137,6 +146,7 @@ buildDialogs();
 buildSetupScreen();
 buildRules();
 buildStorage();
+buildExtraModules();
 syncVersion(INDEX_HTML, version);
 syncVersion(SERVICE_WORKER, version);
 syncVersion(SOURCE_APP, version);

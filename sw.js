@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════
 //  Mölkky Score — Service Worker
-//  Version : V20261107_1255
+//  Version : V20261107_1305
 //  Mise à jour automatique par `npm run build` (même valeur
 //  que APP_VERSION dans index.html et app.js)
 //
@@ -10,7 +10,7 @@
 //   - réseau lent (> 3 s) ou hors ligne : on sert le cache.
 // ═══════════════════════════════════════════════════════════
 
-const APP_VERSION = 'V20261107_1255';
+const APP_VERSION = 'V20261107_1305';
 const CACHE_NAME  = 'molky-cache-' + APP_VERSION;
 const NETWORK_TIMEOUT_MS = 3000;
 
@@ -30,6 +30,8 @@ const ASSETS_TO_CACHE = [
   './setup-screen.js',
   './rules.js',
   './storage.js',
+  './transfer.js',
+  './guide-screen.js',
   './app.js',
   './vendor/react.production.min.js',
   './vendor/react-dom.production.min.js',

@@ -8,8 +8,8 @@ Il sert a deux usages :
 - permettre a une future intervention Codex de reprendre vite, sans redecouvrir toute l'architecture.
 
 Date de mise a jour du README : 2026-11-07.
-Version documentee de l'application : `V20261107_1255`.
-Derniere validation connue : `npm run build V20261107_1255`, puis `npm test`.
+Version documentee de l'application : `V20261107_1305`.
+Derniere validation connue : `npm run build V20261107_1305`, puis `npm test`.
 
 ## Resume court
 
@@ -33,6 +33,21 @@ Le projet est maintenant decoupe en modules, avec :
 - Historique : jusqu'a 200 entrees. Chaque equipe d'une partie porte `id`, `players` (bilan par joueur : lancers, points, rates, record, depassements) et, pour un match, `match` (`id`, `manche`, `winsNeeded`, `wins`, `winnerId`).
 - Partie en cours : `match`, `startRule`, et pour chaque equipe `players` et `playerIdx` (joueur suivant).
 - Depassement mode `'25'` (nom historique) : le score retombe a la moitie de la cible (25 pour 50, 15 pour 30, 20 pour 40, 37 pour 75).
+
+## Export / import (depuis `V20261107_1305`)
+
+Module `src/transfer.js` (copie a la racine par le build), teste par `test:transfer`.
+
+- Contenu exporte : `{ app: 'molkky-score', format: 1, appVersion, exportedAt, data: { history, currentGame, prefs, lastSetup } }`.
+- Code texte : `MOLKKY1:` suivi du JSON encode en base64 (UTF-8, accents conserves). Fichier : le meme JSON, lisible, nomme `molkky-score-AAAAMMJJ-HHMM.json`.
+- L'import accepte le code ou le contenu du fichier ; tout autre contenu est refuse avec un message clair (autre application, version plus recente, code incomplet).
+- « Ajouter » : ajoute les parties absentes (cle = `id` de la partie), garde reglages et partie en cours de l'appareil, reprend la derniere configuration seulement si l'appareil n'en a pas.
+- « Remplacer » : historique, partie en cours, reglages et derniere configuration deviennent ceux de l'export.
+- Envoi en fichier : partage natif du fichier quand le navigateur le permet (AirDrop sur iPhone/iPad), sinon telechargement.
+
+## Guide d'utilisation (depuis `V20261107_1305`)
+
+Module `src/guide-screen.js`, ouvert depuis Reglages. Sept sections numerotees (installer, preparer, jouer, fin de partie, victoire et matchs, historique, reglages et sauvegarde). Chaque section a une maquette construite avec les vraies classes CSS de l'application (donc toujours a jour avec le design) et des reperes numerotes renvoyant aux etapes. A mettre a jour quand une fonctionnalite change.
 
 ## Charte visuelle (depuis `V20261107_1225`)
 
@@ -84,6 +99,9 @@ Fonctionnalites principales :
 - alerte « Dernier essai » quand l'equipe qui joue est a un rate de l'elimination ;
 - garder l'ecran allume pendant la partie (reglage, API Wake Lock, iOS 16.4+) ;
 - afficher les quilles dans l'ordre 1 a 12 ou comme sur le terrain (reglage) ;
+- exporter ses donnees (Reglages > Exporter) : code texte a copier ou partager, ou fichier JSON a envoyer (AirDrop, message, mail) ;
+- importer des donnees (Reglages > Importer) : coller le code ou ouvrir le fichier, puis « Ajouter a mes parties » (fusion sans doublon) ou « Remplacer toutes mes donnees » ;
+- consulter le guide d'utilisation illustre (Reglages > Comment utiliser l'application) ;
 - mettre une partie en pause (bouton `Pause`) : reprendre, retourner a l'accueil sans perdre la partie, recommencer avec les memes equipes (handicaps conserves) ou abandonner (partie effacee, avec confirmation) ;
 - conserver l'historique des parties terminees ;
 - retrouver le libelle d'une partie dans l'historique et le detail ;
@@ -220,7 +238,7 @@ Ces fichiers sont servis par GitHub Pages et doivent etre publies.
 La version courante est :
 
 ```text
-V20261107_1255
+V20261107_1305
 ```
 
 Elle est synchronisee dans :
@@ -249,7 +267,7 @@ npm run build VYYYYMMDD_HHMM
 Exemple :
 
 ```bash
-npm run build V20261107_1255
+npm run build V20261107_1305
 ```
 
 ## Commandes
@@ -302,6 +320,7 @@ Suites actuelles :
 | `test:storage` | `scripts/test-storage.js` | Verifie `localStorage`, historique et nettoyage. |
 | `test:encoding` | `scripts/test-encoding.js` | Detecte les problemes d'encodage/mojibake. |
 | `test:functional` | `scripts/test-functional.js` | Lance un serveur local et teste l'app dans Chromium via Playwright. |
+| `test:transfer` | `scripts/test-transfer.js` | Verifie export/import : aller-retour du code et du fichier, refus des contenus invalides, fusion sans doublon, remplacement. |
 | `test:a11y-mobile` | `scripts/test-a11y-mobile.js` | Verifie viewport mobile, cibles tactiles, focus clavier, historique au clavier et absence de chevauchement quilles / Rate / Valider sur 320x568, 375x667, 390x664 et 430x739. |
 
 Les tests navigateur demandent Playwright : `npm install` (declare en `devDependencies`) puis `npx playwright install chromium`.
@@ -441,6 +460,7 @@ npm test
 | V20260619_2314 | Compactage mobile de l'accueil pour afficher les actions sans scroll et stabilisation de la saisie des equipes sur petits ecrans. |
 | V20260619_2350 | Nouvelle livraison cache/PWA apres ajustement CSS final, pour forcer la mise a jour du service worker. |
 | V20260622_1407 | Scoreboard de partie scrollable horizontalement avec cartes lisibles pour 3 equipes et plus ; historique des coups affiche du Round 1 vers les rounds suivants. |
+| V20261107_1305 | Reglages : export/import des donnees (code texte, fichier, partage AirDrop ; fusion sans doublon ou remplacement) et guide d'utilisation illustre en 7 sections. |
 | V20261107_1255 | Lot 3 gameplay : aide en fin de partie, alerte dernier essai, joueurs dans les equipes avec rotation et statistiques par personne, memorisation de la configuration et suggestions de noms, ordre de la revanche (dernier du classement ou chacun son tour), depassement a la moitie de la cible, ecran toujours allume, match en 2 ou 3 manches gagnantes, disposition des quilles comme sur le terrain, reglages de jeu dans Reglages. |
 | V20261107_1225 | Lot 2 refonte visuelle : theme sombre unique (epicea + bouleau), polices Barlow/Barlow Condensed en woff2 locales a la place de Fredoka One/Nunito, quilles en disques de bois, tableau des scores avec toutes les equipes visibles (jusqu'a 6, sans defilement), icones SVG au lieu des emojis, fenetres unifiees, classement complet sur l'ecran de victoire, confirmation avant suppression d'une partie de l'historique, moyenne par lancer identique partout, styles en ligne remplaces par des classes CSS. |
 | V20261107_1205 | Lot 1 corrections : quilles qui recouvraient Rate (taille adaptee a la place disponible), toast deplace sur l'apercu, bouton Coups joues dans la barre du tour, apercu correct avec essais de grace, handicap borne sous la cible, handicap conserve en recommencant, menu Pause (retour accueil sans perte), partie verrouillee apres victoire, lancer vide refuse, couleurs uniques, noms d'equipes uniques, gagnant memorise par drapeau, rates N/N a l'elimination, service worker reseau d'abord + installation atomique, nettoyage CSS, Playwright en devDependency. |
@@ -467,7 +487,7 @@ Les tableaux ci-dessous sont le suivi officiel.
 | Assets locaux | Ajouter React, polices, icones et manifest localement. | Fait | Haute | Necessaire pour PWA autonome. |
 | Extraction CSS | Sortir les styles de `index.html` vers `styles.css`. | Fait | Haute | Rend `index.html` maintenable. |
 | Build workflow | Ajouter `scripts/build.js` et synchroniser les fichiers generes. | Fait | Haute | Commande : `npm run build`. |
-| Version PWA | Synchroniser `APP_VERSION` entre `index.html`, `sw.js`, `src/app.js`, `app.js`. | Fait | Haute | Version actuelle `V20261107_1255`. |
+| Version PWA | Synchroniser `APP_VERSION` entre `index.html`, `sw.js`, `src/app.js`, `app.js`. | Fait | Haute | Version actuelle `V20261107_1305`. |
 | Service worker | Mettre en cache les assets locaux et permettre reload offline. | Fait | Haute | Teste via Playwright. |
 | Decoupage `rules.js` | Extraire les regles pures du Molkky. | Fait | Haute | Teste par `test:rules`. |
 | Decoupage `storage.js` | Extraire la persistance `localStorage`. | Fait | Haute | Teste par `test:storage`. |
@@ -547,6 +567,8 @@ Les tableaux ci-dessous sont le suivi officiel.
 | Ecran allume | Wake Lock pendant la partie. | Fait | Moyenne | `V20261107_1255`, reglage on/off. |
 | Match en manches | 2 ou 3 manches gagnantes. | Fait | Moyenne | `V20261107_1255`. |
 | Quilles disposition terrain | 7-9-8 / 5-11-12-6 / 3-10-4 / 1-2. | Fait | Basse | `V20261107_1255`, reglage. |
-| Export historique | Export CSV/JSON des parties. | Moyen terme | Basse | Idee future utile. |
+| Export / import | Transferer les donnees entre appareils (code ou fichier JSON). | Fait | Haute | `V20261107_1305`, test `test:transfer` + test fonctionnel. |
+| Guide d'utilisation | Guide illustre dans Reglages. | Fait | Moyenne | `V20261107_1305`. |
+| Synchronisation cloud | Synchroniser automatiquement plusieurs appareils (ex. GitHub Gist). | Moyen terme | Basse | Possible plus tard, comme dans l'application Belote. |
 | Mode tournoi | Gerer plusieurs parties/classement tournoi. | Moyen terme | Basse | Nouvelle fonctionnalite importante, a cadrer. |
 | Multi-appareil temps reel | Synchroniser plusieurs telephones. | A eviter pour l'instant | Basse | Exigerait backend ou service externe. |

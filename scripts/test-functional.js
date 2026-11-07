@@ -444,6 +444,68 @@ async function testSettingsFieldLayoutAndWakeLock(page, baseUrl) {
   assert.ok(wakeCalls >= 1, "l'écran doit être maintenu allumé pendant la partie");
 }
 
+async function testExportImportBetweenDevices(page, baseUrl) {
+  // « Appareil A » : une partie gagnée avec des joueurs.
+  await openSetup(page, baseUrl);
+  await page.getByLabel("Nom de l'équipe 1").fill('Enfants');
+  await page.getByLabel("Nom de l'équipe 2").fill('Papa');
+  await page.getByLabel('Ajouter un joueur à Enfants').fill('Zoé');
+  await page.getByRole('button', { name: '30', exact: true }).click();
+  await page.getByRole('button', { name: /Démarrer/i }).click();
+  await playSinglePin(page, 12);
+  await missThrow(page);
+  await playSinglePin(page, 12);
+  await missThrow(page);
+  await playSinglePin(page, 6);
+  await page.getByText('Victoire', { exact: false }).waitFor();
+  await page.getByRole('button', { name: /Accueil/i }).click();
+
+  await page.getByRole('button', { name: /réglages/i }).click();
+  await page.getByRole('button', { name: /Exporter mes données/ }).click();
+  await page.getByText('1 partie · 2 joueurs', { exact: false }).waitFor();
+  const code = await page.getByLabel("Code d'export").inputValue();
+  assert.ok(code.startsWith('MOLKKY1:'));
+
+  // « Appareil B » : tout est vide, on colle le code.
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.getByRole('button', { name: /réglages/i }).click();
+  await page.getByRole('button', { name: /Importer des données/ }).click();
+  await page.getByLabel('Code à importer').fill('pas un code');
+  await page.getByRole('alert').waitFor();
+  await page.getByLabel('Code à importer').fill(code);
+  await page.locator('.fact-list li', { hasText: 'Parties' }).waitFor();
+  await page.getByRole('button', { name: /Ajouter à mes parties/ }).click();
+  await page.getByText('1 partie ajoutée', { exact: false }).waitFor();
+  await page.getByRole('button', { name: 'Terminé' }).click();
+  await page.waitForSelector('h1');
+  await page.getByRole('button', { name: /historique/i }).click();
+  assert.equal(await page.locator('.history-item').count(), 1);
+  await page.getByRole('tab', { name: 'Statistiques' }).click();
+  await page.getByRole('button', { name: 'Statistiques de Zoé' }).waitFor();
+}
+
+async function testGuide(page, baseUrl) {
+  await page.goto(`${baseUrl}/index.html?guide=${Date.now()}`);
+  await page.waitForSelector('h1');
+  await page.getByRole('button', { name: /réglages/i }).click();
+  await page.getByRole('button', { name: /Comment utiliser l'application/ }).click();
+  const titles = await page.locator('.guide-title').allTextContents();
+  assert.deepEqual(titles.map(t => t.replace(/^\d+/, '').trim()), [
+    "Installer l'application",
+    'Préparer la partie',
+    'Jouer un lancer',
+    'La fin de partie',
+    'Victoire, revanche et matchs',
+    'Historique et statistiques',
+    'Réglages et sauvegarde',
+  ]);
+  // Les maquettes ne sont pas des boutons cliquables.
+  assert.equal(await page.locator('.guide-shot button').count(), 0);
+  await page.getByRole('button', { name: /Retour aux réglages/ }).click();
+  await page.getByText('Sauvegarde et transfert', { exact: true }).waitFor();
+}
+
 async function testOfflineReload(page, baseUrl, server) {
   await page.goto(`${baseUrl}/index.html?offline=${Date.now()}`);
   await page.waitForSelector('h1');
@@ -500,6 +562,8 @@ async function main() {
     await testPlayersRotationAndMemory(page, baseUrl);
     await testMatchTwoWinningManches(page, baseUrl);
     await testSettingsFieldLayoutAndWakeLock(page, baseUrl);
+    await testExportImportBetweenDevices(page, baseUrl);
+    await testGuide(page, baseUrl);
     await testOfflineReload(page, baseUrl, server);
 
     console.log('Functional tests passed');

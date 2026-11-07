@@ -246,6 +246,21 @@ async function auditFieldLayout(page, baseUrl) {
   await page.setViewportSize({ width: 320, height: 568 });
 }
 
+async function auditSettingsAndGuide(page, baseUrl) {
+  await page.goto(`${baseUrl}/index.html?settings=${Date.now()}`);
+  await page.waitForSelector('h1');
+  await page.getByRole('button', { name: /réglages/i }).click();
+  await assertNoHorizontalOverflow(page, 'réglages');
+  await assertTouchTargets(page, 'réglages');
+  await page.getByRole('button', { name: /Exporter mes données/ }).click();
+  await assertNoHorizontalOverflow(page, 'export');
+  await assertTouchTargets(page, 'export');
+  await page.getByRole('button', { name: 'Fermer', exact: true }).click();
+  await page.getByRole('button', { name: /Comment utiliser/ }).click();
+  await assertNoHorizontalOverflow(page, 'guide');
+  await assertTouchTargets(page, 'guide');
+}
+
 async function auditHistoryKeyboard(page, baseUrl) {
   await page.goto(`${baseUrl}/index.html?history=${Date.now()}`);
   await seedHistory(page);
@@ -277,6 +292,7 @@ async function main() {
     await auditHomeAndSetup(page, baseUrl);
     await auditHistoryKeyboard(page, baseUrl);
     await auditFieldLayout(page, baseUrl);
+    await auditSettingsAndGuide(page, baseUrl);
 
     console.log('Mobile accessibility tests passed');
   } finally {
