@@ -23,12 +23,21 @@
     };
   }
 
-  function createTeamState(team, targetScore) {
+  function normalizePlayers(players) {
+    return Array.isArray(players)
+      ? players.map(name => String(name || '').trim()).filter(Boolean)
+      : [];
+  }
+
+  function createTeamState(team, targetScore, index = 0) {
     // Garde-fou : un handicap ne peut jamais atteindre ou dépasser le score cible.
     const rawHandicap = Math.max(0, Number(team.handicap) || 0);
     const handicap = targetScore ? Math.min(rawHandicap, targetScore - 1) : rawHandicap;
     return {
       ...team,
+      id: team.id !== undefined ? team.id : `t${index + 1}`,
+      players: normalizePlayers(team.players),
+      playerIdx: 0,
       handicap,
       score: handicap,
       misses: 0,
@@ -46,6 +55,7 @@
     return teams.map(team => ({
       ...team,
       score: team.handicap || 0,
+      playerIdx: 0,
       misses: 0,
       overflowStrikes: 0,
       totalThrows: 0,
@@ -63,10 +73,14 @@
     rules,
     gameLabel = '',
     startedAt = Date.now(),
+    match = null,
+    startRule = 'loser',
   }) {
     return {
       gameLabel,
-      teams: teams.map(team => createTeamState(team, targetScore)),
+      match,
+      startRule,
+      teams: teams.map((team, index) => createTeamState(team, targetScore, index)),
       currentTeamIdx: 0,
       selectedPins: [],
       throws: [],
@@ -95,6 +109,22 @@
     }));
   }
 
+  // Joueur qui lance pour cette équipe (null si l'équipe n'a pas de joueurs).
+  function currentPlayerName(team) {
+    const players = (team && team.players) || [];
+    if (!players.length) return null;
+    return players[(team.playerIdx || 0) % players.length];
+  }
+
+  function advancePlayer(team) {
+    const players = team.players || [];
+    if (!players.length) return team;
+    return {
+      ...team,
+      playerIdx: ((team.playerIdx || 0) + 1) % players.length,
+    };
+  }
+
   function cloneTeamForUndo(team) {
     return {
       ...team,
@@ -119,7 +149,12 @@
     } = state;
     const team = teams[currentTeamIdx];
     const teamBefore = cloneTeamForUndo(team);
-    const outcome = calculateThrowOutcome(team, selectedPins, targetScore, activeRules);
+    const rawOutcome = calculateThrowOutcome(team, selectedPins, targetScore, activeRules);
+    const outcome = {
+      ...rawOutcome,
+      updatedTeam: advancePlayer(rawOutcome.updatedTeam),
+    };
+    const player = currentPlayerName(team);
     const newTeams = teams.map((entry, i) => i === currentTeamIdx ? outcome.updatedTeam : entry);
     const nextIdx = getNextActiveTeamIndex(newTeams, currentTeamIdx);
 
@@ -140,6 +175,7 @@
         selectedPins: [],
         throws: [...throws, {
           teamIdx: currentTeamIdx,
+          player,
           pins: [...selectedPins],
           points: outcome.score,
           teamBefore,
@@ -168,7 +204,12 @@
     } = state;
     const team = teams[currentTeamIdx];
     const teamBefore = cloneTeamForUndo(team);
-    const outcome = calculateMissOutcome(team, activeRules);
+    const rawOutcome = calculateMissOutcome(team, activeRules);
+    const outcome = {
+      ...rawOutcome,
+      updatedTeam: advancePlayer(rawOutcome.updatedTeam),
+    };
+    const player = currentPlayerName(team);
     const newTeams = teams.map((entry, i) => i === currentTeamIdx ? outcome.updatedTeam : entry);
     const nextIdx = getNextActiveTeamIndex(newTeams, currentTeamIdx);
     const activeTeams = newTeams.filter(entry => !entry.eliminated);
@@ -189,6 +230,7 @@
         selectedPins: [],
         throws: [...throws, {
           teamIdx: currentTeamIdx,
+          player,
           pins: [],
           points: 0,
           teamBefore,
@@ -348,7 +390,98 @@
     };
   }
 
+  // Bilan par joueur d'une équipe, calculé à partir des coups joués.
+  function summarizePlayers(throws, teamIdx, team) {
+    const fallback = team && team.name ? team.name : `Équipe ${teamIdx + 1}`;
+    const byName = new Map();
+    const order = normalizePlayers(team && team.players);
+    order.forEach(name => byName.set(name, null));
+    (throws || []).filter(entry => entry.teamIdx === teamIdx).forEach(entry => {
+      const name = entry.player || fallback;
+      const current = byName.get(name) || {
+        name,
+        throws: 0,
+        score: 0,
+        misses: 0,
+        maxThrow: 0,
+        overflows: 0,
+      };
+      current.throws += 1;
+      current.score += entry.points || 0;
+      if (entry.miss) current.misses += 1;
+      if (entry.overflow) current.overflows += 1;
+      current.maxThrow = Math.max(current.maxThrow, entry.points || 0);
+      byName.set(name, current);
+    });
+    return Array.from(byName.entries()).map(([name, stats]) => stats || {
+      name,
+      throws: 0,
+      score: 0,
+      misses: 0,
+      maxThrow: 0,
+      overflows: 0,
+    });
+  }
+
+  // Ordre de passage de la partie suivante (revanche ou manche suivante).
+  // rule 'loser'  : la dernière équipe du classement commence ;
+  // rule 'rotate' : l'équipe qui suivait la première commence.
+  // L'ordre circulaire est toujours conservé.
+  function orderTeamsForNextGame(teams, rule, rankedIds) {
+    if (!Array.isArray(teams) || teams.length < 2) return teams;
+    let starterIdx = 1;
+    if (rule === 'loser' && Array.isArray(rankedIds) && rankedIds.length) {
+      const loserId = rankedIds[rankedIds.length - 1];
+      const found = teams.findIndex(team => team.id === loserId);
+      starterIdx = found >= 0 ? found : 1;
+    }
+    return teams.slice(starterIdx).concat(teams.slice(0, starterIdx));
+  }
+
+  function createMatch(teams, winsNeeded, now = Date.now()) {
+    if (!winsNeeded || winsNeeded < 2) return null;
+    const wins = {};
+    teams.forEach((team, index) => {
+      wins[team.id !== undefined ? team.id : `t${index + 1}`] = 0;
+    });
+    return {
+      id: now,
+      winsNeeded,
+      wins,
+      manche: 1,
+      winnerId: null,
+    };
+  }
+
+  function recordMancheWin(match, winnerId) {
+    if (!match) return null;
+    const wins = {
+      ...match.wins,
+      [winnerId]: (match.wins[winnerId] || 0) + 1,
+    };
+    const over = wins[winnerId] >= match.winsNeeded;
+    return {
+      ...match,
+      wins,
+      winnerId: over ? winnerId : null,
+    };
+  }
+
+  function nextManche(match) {
+    return match ? {
+      ...match,
+      manche: match.manche + 1,
+    } : null;
+  }
+
   return {
+    normalizePlayers,
+    currentPlayerName,
+    summarizePlayers,
+    orderTeamsForNextGame,
+    createMatch,
+    recordMancheWin,
+    nextManche,
     normalizeGameRules,
     createInitialGameState,
     createTeamState,

@@ -7,7 +7,15 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   const KEY_CURRENT = 'molky_current_game_v2';
   const KEY_HISTORY = 'molky_history_v2';
-  const MAX_HISTORY = 50;
+  const KEY_PREFS = 'molky_prefs_v1';
+  const KEY_LAST_SETUP = 'molky_last_setup_v1';
+  // Une manche = une entrée : on garde de la marge pour les matchs.
+  const MAX_HISTORY = 200;
+  const DEFAULT_PREFS = {
+    helpOn: true,
+    wakeLock: true,
+    pinLayout: 'numeric',
+  };
 
   function isObject(value) {
     return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -95,6 +103,71 @@
     } catch {}
   }
 
+  function loadPrefs(storage = localStorage) {
+    try {
+      const prefs = parseJson(storage.getItem(KEY_PREFS), {});
+      return {
+        ...DEFAULT_PREFS,
+        ...(isObject(prefs) ? prefs : {}),
+      };
+    } catch {
+      return { ...DEFAULT_PREFS };
+    }
+  }
+
+  function savePrefs(prefs, storage = localStorage) {
+    try {
+      storage.setItem(KEY_PREFS, JSON.stringify({
+        ...DEFAULT_PREFS,
+        ...prefs,
+      }));
+    } catch {}
+  }
+
+  // Derniers réglages de « Nouvelle partie » (équipes, joueurs, règles).
+  function loadLastSetup(storage = localStorage) {
+    try {
+      const setup = parseJson(storage.getItem(KEY_LAST_SETUP), null);
+      if (!isObject(setup) || !Array.isArray(setup.teams) || setup.teams.length < 2) return null;
+      if (!setup.teams.every(team => isObject(team) && typeof team.name === 'string')) return null;
+      return setup;
+    } catch {
+      return null;
+    }
+  }
+
+  function saveLastSetup(setup, storage = localStorage) {
+    try {
+      storage.setItem(KEY_LAST_SETUP, JSON.stringify(setup));
+    } catch {}
+  }
+
+  function clearLastSetup(storage = localStorage) {
+    try {
+      storage.removeItem(KEY_LAST_SETUP);
+    } catch {}
+  }
+
+  // Noms déjà utilisés (équipes et joueurs), pour les suggestions de saisie.
+  function collectKnownNames(history, lastSetup) {
+    const names = new Map();
+    const add = name => {
+      const clean = String(name || '').trim();
+      if (!clean || /^Équipe \d+$/.test(clean)) return;
+      const key = clean.toLocaleLowerCase('fr-FR');
+      if (!names.has(key)) names.set(key, clean);
+    };
+    (history || []).forEach(game => (game.teams || []).forEach(team => {
+      add(team.name);
+      (team.players || []).forEach(player => add(player && player.name !== undefined ? player.name : player));
+    }));
+    ((lastSetup && lastSetup.teams) || []).forEach(team => {
+      add(team.name);
+      (team.players || []).forEach(add);
+    });
+    return Array.from(names.values()).sort((a, b) => a.localeCompare(b, 'fr'));
+  }
+
   function estimateStorageSize(storage = localStorage) {
     try {
       let bytes = 0;
@@ -117,6 +190,15 @@
   return {
     KEY_CURRENT,
     KEY_HISTORY,
+    KEY_PREFS,
+    KEY_LAST_SETUP,
+    DEFAULT_PREFS,
+    loadPrefs,
+    savePrefs,
+    loadLastSetup,
+    saveLastSetup,
+    clearLastSetup,
+    collectKnownNames,
     loadCurrentGame,
     saveCurrentGame,
     clearCurrentGame,

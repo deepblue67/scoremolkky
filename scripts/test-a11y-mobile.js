@@ -227,6 +227,25 @@ async function auditHomeAndSetup(page, baseUrl) {
   await page.setViewportSize({ width: 320, height: 568 });
 }
 
+async function auditFieldLayout(page, baseUrl) {
+  await page.goto(`${baseUrl}/index.html?field=${Date.now()}`);
+  await page.evaluate(() => {
+    localStorage.clear();
+    localStorage.setItem('molky_prefs_v1', JSON.stringify({ pinLayout: 'field' }));
+  });
+  await page.reload();
+  await page.getByRole('button', { name: /Nouvelle partie/i }).click();
+  await page.getByRole('button', { name: /Démarrer/i }).click();
+  await page.locator('.pins-grid.is-field').waitFor();
+  for (const [width, height] of [[320, 568], [375, 667], [390, 664]]) {
+    await page.setViewportSize({ width, height });
+    await page.waitForTimeout(100);
+    await assertGameControlsDoNotOverlap(page, `terrain ${width}x${height}`);
+  }
+  await assertTouchTargets(page, 'terrain');
+  await page.setViewportSize({ width: 320, height: 568 });
+}
+
 async function auditHistoryKeyboard(page, baseUrl) {
   await page.goto(`${baseUrl}/index.html?history=${Date.now()}`);
   await seedHistory(page);
@@ -257,6 +276,7 @@ async function main() {
 
     await auditHomeAndSetup(page, baseUrl);
     await auditHistoryKeyboard(page, baseUrl);
+    await auditFieldLayout(page, baseUrl);
 
     console.log('Mobile accessibility tests passed');
   } finally {

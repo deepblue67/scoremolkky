@@ -8,6 +8,8 @@
   root.MolkkyGameComponents = gameComponents;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function (React, constants, components) {
   const { SORTED_PINS } = constants;
+  // Disposition de départ sur le terrain, vue depuis la zone de lancer.
+  const FIELD_ROWS = [[7, 9, 8], [5, 11, 12, 6], [3, 10, 4], [1, 2]];
   const { Icon, Sheet } = components;
   const h = React ? React.createElement : null;
   const { useEffect, useRef, useState } = React || {};
@@ -110,11 +112,13 @@
     currentTeamIdx,
     targetScore,
     rules,
+    match,
   }) {
     const activeRules = rules || {
       eliminationOn: true,
       missLimit: 3,
     };
+    const wins = match && match.wins ? match.wins : null;
 
     return h("div", {
       className: "scoreboard",
@@ -135,7 +139,10 @@
         className: "tile-head"
       }, h("span", {
         className: "tile-name"
-      }, team.name), team.eliminated ? h("span", {
+      }, team.name, wins && wins[team.id] > 0 && h("span", {
+        className: "tile-wins num",
+        "aria-label": `${wins[team.id]} manche${wins[team.id] > 1 ? 's' : ''} gagnée${wins[team.id] > 1 ? 's' : ''}`
+      }, wins[team.id])), team.eliminated ? h("span", {
         className: "tile-status"
       }, "\xE9limin\xE9e") : activeRules.eliminationOn && h(MissDots, {
         misses: team.misses || 0,
@@ -171,11 +178,38 @@
     onUndoLast,
     onConfirmThrow,
     onAbandon,
+    rules,
+    match,
+    prefs,
+    currentPlayer,
   }) {
     const [historyOpen, setHistoryOpen] = useState(false);
+    const activeRules = rules || {};
+    const missLimit = activeRules.missLimit || 3;
+    const lastChance = Boolean(activeRules.eliminationOn) && (currentTeam.misses || 0) === missLimit - 1;
+    const remaining = targetScore - currentTeam.score;
+    const helpOn = !prefs || prefs.helpOn !== false;
+    const helpActive = helpOn && remaining >= 1 && remaining <= 12;
+    const fieldLayout = prefs && prefs.pinLayout === 'field';
+    const pinClass = pin => {
+      const classes = ['wood-disc', 'pin-btn', 'num'];
+      if (selectedPins.includes(pin)) classes.push('selected');
+      if (helpActive && pin === remaining) classes.push('is-target');
+      if (helpActive && pin > remaining) classes.push('is-over');
+      return classes.join(' ');
+    };
+    const renderPin = pin => h("button", {
+      key: pin,
+      type: "button",
+      className: pinClass(pin),
+      "aria-pressed": selectedPins.includes(pin),
+      "aria-label": `Quille ${pin}`,
+      disabled: locked,
+      onClick: () => onTogglePin(pin)
+    }, pin);
     const hasSelection = selectedPins.length > 0;
     const playedCount = (throwHistory || []).length;
-    const selectedLabel = hasSelection ? selectedPins.length === 1 ? `Quille ${selectedPins[0]}` : `${selectedPins.length} quilles` : 'Ce lancer';
+    const selectedLabel = hasSelection ? selectedPins.length === 1 ? `Quille ${selectedPins[0]}` : `${selectedPins.length} quilles` : helpActive ? `Il faut ${remaining}` : 'Ce lancer';
     const afterLabel = hasSelection && willOverflow ? overflowLabel : 'Apr\xE8s';
     const wins = hasSelection && !willOverflow && displayAfter === targetScore;
     return h("div", {
@@ -184,6 +218,8 @@
       className: "turnbar"
     }, h("div", {
       className: "turn-label"
+    }, h("div", {
+      className: "turn-main"
     }, h("span", {
       className: "turn-prefix"
     }, "Tour de "), h("span", {
@@ -191,9 +227,16 @@
       style: {
         color: currentTeam.color
       }
-    }, currentTeam.name), h("span", {
+    }, currentTeam.name)), h("div", {
+      className: "turn-meta"
+    }, currentPlayer && h("span", {
+      className: "turn-player"
+    }, currentPlayer, " lance"), lastChance ? h("span", {
+      className: "turn-alert",
+      role: "status"
+    }, "Dernier essai") : h("span", {
       className: "turn-round"
-    }, " \xB7 round ", round)), h("button", {
+    }, match ? `manche ${match.manche} · ` : '', "round ", round))), h("button", {
       type: "button",
       className: "history-btn",
       "aria-label": `Afficher l'historique des coups, ${playedCount} coups joués`,
@@ -231,30 +274,30 @@
       className: `preview-value num score-col-value ${hasSelection ? willOverflow ? 'is-overflow overflow' : wins ? 'is-win' : 'is-after' : ''}`
     }, hasSelection ? displayAfter : '—')))), h("div", {
       className: "pins-grid-container"
-    }, h("div", {
+    }, fieldLayout ? h("div", {
+      className: "pins-grid is-field",
+      style: {
+        '--team': currentTeam.color
+      }
+    }, FIELD_ROWS.map((row, ri) => h("div", {
+      key: ri,
+      className: "pins-row"
+    }, row.map(renderPin)))) : h("div", {
       className: "pins-grid",
       style: {
         '--team': currentTeam.color
       }
-    }, SORTED_PINS.map(pin => h("button", {
-      key: pin,
-      type: "button",
-      className: `wood-disc pin-btn num ${selectedPins.includes(pin) ? 'selected' : ''}`,
-      "aria-pressed": selectedPins.includes(pin),
-      "aria-label": `Quille ${pin}`,
-      disabled: locked,
-      onClick: () => onTogglePin(pin)
-    }, pin)))), h("div", {
+    }, SORTED_PINS.map(renderPin))), h("div", {
       className: "miss-bar"
     }, h("button", {
       type: "button",
-      className: "miss-bar-btn",
-      "aria-label": "Valider un lancer rat\xE9 sans quille renvers\xE9e",
+      className: `miss-bar-btn ${lastChance ? 'is-last' : ''}`,
+      "aria-label": lastChance ? "Valider un lancer rat\xE9 sans quille renvers\xE9e : \xE9limine l'\xE9quipe" : "Valider un lancer rat\xE9 sans quille renvers\xE9e",
       disabled: locked,
       onClick: onConfirmMiss
     }, h(Icon, {
       name: "x"
-    }), "Rat\xE9", h("small", null, "aucune quille"))), h("div", {
+    }), "Rat\xE9", h("small", null, lastChance ? "\xE9limine l'\xE9quipe" : "aucune quille"))), h("div", {
       className: "bottom-action-row"
     }, h("button", {
       type: "button",

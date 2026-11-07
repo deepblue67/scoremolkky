@@ -8,8 +8,8 @@ Il sert a deux usages :
 - permettre a une future intervention Codex de reprendre vite, sans redecouvrir toute l'architecture.
 
 Date de mise a jour du README : 2026-11-07.
-Version documentee de l'application : `V20261107_1225`.
-Derniere validation connue : `npm run build V20261107_1225`, puis `npm test`.
+Version documentee de l'application : `V20261107_1255`.
+Derniere validation connue : `npm run build V20261107_1255`, puis `npm test`.
 
 ## Resume court
 
@@ -25,6 +25,14 @@ Le projet est maintenant decoupe en modules, avec :
 - une PWA autonome avec React local, polices locales, icones, manifest et service worker ;
 - des tests unitaires et fonctionnels ;
 - une version de livraison synchronisee dans `index.html`, `sw.js`, `src/app.js` et `app.js`.
+
+## Donnees enregistrees (depuis `V20261107_1255`)
+
+- `molky_prefs_v1` : reglages de l'application (`helpOn`, `wakeLock`, `pinLayout` = `numeric` ou `field`).
+- `molky_last_setup_v1` : derniere configuration lancee (equipes, joueurs, handicaps, regles, format, ordre).
+- Historique : jusqu'a 200 entrees. Chaque equipe d'une partie porte `id`, `players` (bilan par joueur : lancers, points, rates, record, depassements) et, pour un match, `match` (`id`, `manche`, `winsNeeded`, `wins`, `winnerId`).
+- Partie en cours : `match`, `startRule`, et pour chaque equipe `players` et `playerIdx` (joueur suivant).
+- Depassement mode `'25'` (nom historique) : le score retombe a la moitie de la cible (25 pour 50, 15 pour 30, 20 pour 40, 37 pour 75).
 
 ## Charte visuelle (depuis `V20261107_1225`)
 
@@ -68,6 +76,14 @@ Fonctionnalites principales :
 - detecter une victoire par elimination ;
 - sauvegarder la partie en cours ;
 - reprendre une partie sauvegardee ;
+- ajouter des joueurs (facultatif) dans chaque equipe : l'application indique qui lance et fait tourner les joueurs de l'equipe ; les statistiques sont tenues par personne ;
+- retrouver automatiquement les dernieres equipes, joueurs et reglages dans Nouvelle partie (bouton pour tout remettre a zero) et des suggestions de noms deja utilises ;
+- jouer un match en 2 ou 3 manches gagnantes : enchainement des manches, score du match, chaque manche enregistree dans l'historique ;
+- choisir qui commence la revanche ou la manche suivante : le dernier du classement, ou chacun son tour ;
+- aide en fin de partie (reglage) : quand il reste 12 points ou moins, la quille gagnante est entouree, les quilles qui feraient depasser sont attenuees, l'apercu affiche « Il faut N » ;
+- alerte « Dernier essai » quand l'equipe qui joue est a un rate de l'elimination ;
+- garder l'ecran allume pendant la partie (reglage, API Wake Lock, iOS 16.4+) ;
+- afficher les quilles dans l'ordre 1 a 12 ou comme sur le terrain (reglage) ;
 - mettre une partie en pause (bouton `Pause`) : reprendre, retourner a l'accueil sans perdre la partie, recommencer avec les memes equipes (handicaps conserves) ou abandonner (partie effacee, avec confirmation) ;
 - conserver l'historique des parties terminees ;
 - retrouver le libelle d'une partie dans l'historique et le detail ;
@@ -204,7 +220,7 @@ Ces fichiers sont servis par GitHub Pages et doivent etre publies.
 La version courante est :
 
 ```text
-V20261107_1225
+V20261107_1255
 ```
 
 Elle est synchronisee dans :
@@ -233,7 +249,7 @@ npm run build VYYYYMMDD_HHMM
 Exemple :
 
 ```bash
-npm run build V20261107_1225
+npm run build V20261107_1255
 ```
 
 ## Commandes
@@ -425,6 +441,7 @@ npm test
 | V20260619_2314 | Compactage mobile de l'accueil pour afficher les actions sans scroll et stabilisation de la saisie des equipes sur petits ecrans. |
 | V20260619_2350 | Nouvelle livraison cache/PWA apres ajustement CSS final, pour forcer la mise a jour du service worker. |
 | V20260622_1407 | Scoreboard de partie scrollable horizontalement avec cartes lisibles pour 3 equipes et plus ; historique des coups affiche du Round 1 vers les rounds suivants. |
+| V20261107_1255 | Lot 3 gameplay : aide en fin de partie, alerte dernier essai, joueurs dans les equipes avec rotation et statistiques par personne, memorisation de la configuration et suggestions de noms, ordre de la revanche (dernier du classement ou chacun son tour), depassement a la moitie de la cible, ecran toujours allume, match en 2 ou 3 manches gagnantes, disposition des quilles comme sur le terrain, reglages de jeu dans Reglages. |
 | V20261107_1225 | Lot 2 refonte visuelle : theme sombre unique (epicea + bouleau), polices Barlow/Barlow Condensed en woff2 locales a la place de Fredoka One/Nunito, quilles en disques de bois, tableau des scores avec toutes les equipes visibles (jusqu'a 6, sans defilement), icones SVG au lieu des emojis, fenetres unifiees, classement complet sur l'ecran de victoire, confirmation avant suppression d'une partie de l'historique, moyenne par lancer identique partout, styles en ligne remplaces par des classes CSS. |
 | V20261107_1205 | Lot 1 corrections : quilles qui recouvraient Rate (taille adaptee a la place disponible), toast deplace sur l'apercu, bouton Coups joues dans la barre du tour, apercu correct avec essais de grace, handicap borne sous la cible, handicap conserve en recommencant, menu Pause (retour accueil sans perte), partie verrouillee apres victoire, lancer vide refuse, couleurs uniques, noms d'equipes uniques, gagnant memorise par drapeau, rates N/N a l'elimination, service worker reseau d'abord + installation atomique, nettoyage CSS, Playwright en devDependency. |
 
@@ -450,7 +467,7 @@ Les tableaux ci-dessous sont le suivi officiel.
 | Assets locaux | Ajouter React, polices, icones et manifest localement. | Fait | Haute | Necessaire pour PWA autonome. |
 | Extraction CSS | Sortir les styles de `index.html` vers `styles.css`. | Fait | Haute | Rend `index.html` maintenable. |
 | Build workflow | Ajouter `scripts/build.js` et synchroniser les fichiers generes. | Fait | Haute | Commande : `npm run build`. |
-| Version PWA | Synchroniser `APP_VERSION` entre `index.html`, `sw.js`, `src/app.js`, `app.js`. | Fait | Haute | Version actuelle `V20261107_1225`. |
+| Version PWA | Synchroniser `APP_VERSION` entre `index.html`, `sw.js`, `src/app.js`, `app.js`. | Fait | Haute | Version actuelle `V20261107_1255`. |
 | Service worker | Mettre en cache les assets locaux et permettre reload offline. | Fait | Haute | Teste via Playwright. |
 | Decoupage `rules.js` | Extraire les regles pures du Molkky. | Fait | Haute | Teste par `test:rules`. |
 | Decoupage `storage.js` | Extraire la persistance `localStorage`. | Fait | Haute | Teste par `test:storage`. |
@@ -521,6 +538,15 @@ Les tableaux ci-dessous sont le suivi officiel.
 | Accessibilite clavier | Verifier navigation clavier et focus visible. | Partiel | Moyenne | Focus visible et historique clavier testes en `test:a11y-mobile`. |
 | Lisibilite mobile terrain | Tester sur vrais petits ecrans. | Partiel | Moyenne | Viewport 320px automatise et ecran jeu reequilibre ; vrai appareil encore a faire. |
 | Sons/vibrations | Ajouter retours sensoriels. | Moyen terme | Basse | Pas prioritaire. |
+| Aide fin de partie | Quille gagnante entouree, quilles qui depassent attenuees, « Il faut N ». | Fait | Haute | `V20261107_1255`, reglage on/off. |
+| Alerte dernier essai | Signal quand l'equipe est a un rate de l'elimination. | Fait | Haute | `V20261107_1255`. |
+| Joueurs dans les equipes | Rotation des lanceurs, statistiques par personne. | Fait | Haute | `V20261107_1255`. |
+| Memoire configuration | Dernieres equipes/reglages repris, suggestions de noms. | Fait | Moyenne | `V20261107_1255`. |
+| Ordre revanche | Dernier du classement ou chacun son tour. | Fait | Moyenne | `V20261107_1255`. |
+| Depassement proportionnel | Retombe a la moitie de la cible. | Fait | Moyenne | `V20261107_1255`. |
+| Ecran allume | Wake Lock pendant la partie. | Fait | Moyenne | `V20261107_1255`, reglage on/off. |
+| Match en manches | 2 ou 3 manches gagnantes. | Fait | Moyenne | `V20261107_1255`. |
+| Quilles disposition terrain | 7-9-8 / 5-11-12-6 / 3-10-4 / 1-2. | Fait | Basse | `V20261107_1255`, reglage. |
 | Export historique | Export CSV/JSON des parties. | Moyen terme | Basse | Idee future utile. |
 | Mode tournoi | Gerer plusieurs parties/classement tournoi. | Moyen terme | Basse | Nouvelle fonctionnalite importante, a cadrer. |
 | Multi-appareil temps reel | Synchroniser plusieurs telephones. | A eviter pour l'instant | Basse | Exigerait backend ou service externe. |

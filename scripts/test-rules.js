@@ -70,10 +70,15 @@ assert.deepEqual(rules.calculateThrowOutcome(baseTeam, [1], 30, { overflowMode: 
   },
 });
 
+// Cible 30 : on retombe à la moitié de la cible (15), plus à 25.
 assert.equal(
   rules.calculateThrowOutcome(baseTeam, [5], 30, { overflowMode: '25', overflowGrace: 0 }).updatedTeam.score,
-  25
+  15
 );
+assert.equal(rules.overflowResetScore(50), 25);
+assert.equal(rules.overflowResetScore(40), 20);
+assert.equal(rules.overflowResetScore(75), 37);
+assert.equal(rules.calculateOverflowPenalty(80, '25', 75), 37);
 
 assert.equal(
   rules.calculateThrowOutcome(baseTeam, [5], 30, { overflowMode: '0', overflowGrace: 0 }).updatedTeam.score,
@@ -91,7 +96,7 @@ assert.equal(graceOutcome.updatedTeam.overflowStrikes, 1);
 assert.equal(graceOutcome.penalized, false);
 
 const secondGraceOutcome = rules.calculateThrowOutcome(graceOutcome.updatedTeam, [5], 30, { overflowMode: '25', overflowGrace: 1 });
-assert.equal(secondGraceOutcome.updatedTeam.score, 25);
+assert.equal(secondGraceOutcome.updatedTeam.score, 15);
 assert.equal(secondGraceOutcome.updatedTeam.overflowStrikes, 0);
 assert.equal(secondGraceOutcome.penalized, true);
 

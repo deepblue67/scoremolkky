@@ -212,4 +212,48 @@ const clampedStart = gameState.createInitialGameState({
 assert.equal(clampedStart.teams[0].score, 29);
 assert.equal(clampedStart.teams[0].handicap, 29);
 
+// Joueurs : rotation dans l'équipe, joueur noté sur chaque coup, annulation.
+const withPlayers = gameState.createInitialGameState({
+  teams: [{ id: 1, name: 'Enfants', players: ['Léo', ' Emma ', ''] }, { id: 2, name: 'Parents' }],
+  targetScore: 50,
+});
+assert.deepEqual(withPlayers.teams[0].players, ['Léo', 'Emma']);
+assert.equal(gameState.currentPlayerName(withPlayers.teams[0]), 'Léo');
+assert.equal(gameState.currentPlayerName(withPlayers.teams[1]), null);
+let ps = { ...withPlayers, selectedPins: [6] };
+ps = gameState.applyThrowTransition(ps, 50).nextState;            // Léo +6
+assert.equal(ps.throws[0].player, 'Léo');
+ps = gameState.applyMissTransition(ps).nextState;                  // Parents raté
+assert.equal(ps.throws[1].player, null);
+assert.equal(gameState.currentPlayerName(ps.teams[0]), 'Emma');
+ps = gameState.applyMissTransition(ps).nextState;                  // Emma raté
+assert.equal(gameState.currentPlayerName(ps.teams[0]), 'Léo');
+const undone = gameState.applyUndoTransition(ps).nextState;
+assert.equal(gameState.currentPlayerName(undone.teams[0]), 'Emma');
+assert.deepEqual(gameState.summarizePlayers(ps.throws, 0, ps.teams[0]), [
+  { name: 'Léo', throws: 1, score: 6, misses: 0, maxThrow: 6, overflows: 0 },
+  { name: 'Emma', throws: 1, score: 0, misses: 1, maxThrow: 0, overflows: 0 },
+]);
+assert.deepEqual(gameState.summarizePlayers(ps.throws, 1, ps.teams[1]), [
+  { name: 'Parents', throws: 1, score: 0, misses: 1, maxThrow: 0, overflows: 0 },
+]);
+
+// Ordre de la partie suivante.
+const order = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
+assert.deepEqual(gameState.orderTeamsForNextGame(order, 'rotate').map(t => t.id), ['b', 'c', 'a']);
+assert.deepEqual(gameState.orderTeamsForNextGame(order, 'loser', ['b', 'a', 'c']).map(t => t.id), ['c', 'a', 'b']);
+assert.deepEqual(gameState.orderTeamsForNextGame(order, 'loser', ['c', 'b', 'a']).map(t => t.id), ['a', 'b', 'c']);
+
+// Match en 2 manches gagnantes.
+let match = gameState.createMatch([{ id: 'a' }, { id: 'b' }], 2, 99);
+assert.deepEqual(match, { id: 99, winsNeeded: 2, wins: { a: 0, b: 0 }, manche: 1, winnerId: null });
+assert.equal(gameState.createMatch([{ id: 'a' }, { id: 'b' }], 1), null);
+match = gameState.recordMancheWin(match, 'a');
+assert.equal(match.winnerId, null);
+match = gameState.nextManche(match);
+assert.equal(match.manche, 2);
+match = gameState.recordMancheWin(match, 'a');
+assert.equal(match.winnerId, 'a');
+assert.deepEqual(match.wins, { a: 2, b: 0 });
+
 console.log('Game state tests passed');

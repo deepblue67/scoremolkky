@@ -26,12 +26,20 @@ const {
   addGameToHistory,
   clearAll: clearStoredData,
   estimateStorageSize,
-  formatStorageSize
+  formatStorageSize,
+  DEFAULT_PREFS,
+  loadPrefs,
+  savePrefs,
+  loadLastSetup,
+  saveLastSetup,
+  collectKnownNames
 } = MolkkyStorage;
-const APP_VERSION = 'V20261107_1225';
+const APP_VERSION = 'V20261107_1255';
 const {
   FieldDiagram,
-  Icon
+  Icon,
+  Toggle,
+  ChipSelect
 } = MolkkyComponents;
 const h = React.createElement;
 const {
@@ -41,6 +49,12 @@ const {
 const {
   normalizeGameRules,
   createInitialGameState,
+  currentPlayerName,
+  summarizePlayers,
+  orderTeamsForNextGame,
+  createMatch,
+  recordMancheWin,
+  nextManche,
   applyThrowTransition,
   applyMissTransition,
   applyUndoTransition,
@@ -58,11 +72,56 @@ const {
 function isTeamWinner(game, team) {
   return typeof team.winner === 'boolean' ? team.winner : team.name === game.winner;
 }
+// Une ligne par personne ayant joué la partie. Équipe sans joueurs (ou partie
+// ancienne) : l'équipe compte comme un seul joueur portant son nom.
+function participations(game) {
+  const result = [];
+  (game.teams || []).forEach(team => {
+    const won = isTeamWinner(game, team);
+    const players = Array.isArray(team.players) ? team.players.filter(p => p && p.name) : [];
+    if (players.length) {
+      players.forEach(p => result.push({
+        name: p.name,
+        color: team.color,
+        teamName: team.name,
+        teamScore: team.score,
+        won,
+        eliminated: Boolean(team.eliminated),
+        throws: p.throws || 0,
+        totalScore: p.score || 0,
+        maxThrow: p.maxThrow || 0,
+        misses: p.misses || 0,
+        overflows: p.overflows || 0
+      }));
+    } else {
+      result.push({
+        name: team.name,
+        color: team.color,
+        teamName: team.name,
+        teamScore: team.score,
+        won,
+        eliminated: Boolean(team.eliminated),
+        throws: team.totalThrows || 0,
+        totalScore: team.totalScore || 0,
+        maxThrow: team.maxThrow || 0,
+        misses: team.misses || 0,
+        overflows: team.overflows || 0
+      });
+    }
+  });
+  return result;
+}
+function nameKey(name) {
+  return String(name || '').trim().toLocaleLowerCase('fr-FR');
+}
 function GameScreen({
   teams: initialTeams,
   targetScore,
   rules,
   gameLabel = '',
+  match = null,
+  startRule = 'loser',
+  prefs = DEFAULT_PREFS,
   onEnd,
   onPause,
   resumeState
@@ -72,7 +131,9 @@ function GameScreen({
     teams: initialTeams,
     targetScore,
     rules: initialRules,
-    gameLabel
+    gameLabel,
+    match,
+    startRule
   });
   const [state, setState] = useState(initState);
   const stateRef = useRef(state);
@@ -93,6 +154,25 @@ function GameScreen({
     clearPendingTimers();
     clearTimeout(toastTimer.current);
   }, []);
+  // Écran toujours allumé pendant la partie (Safari iOS 16.4+, Chrome…).
+  useEffect(() => {
+    if (!prefs.wakeLock || winner || !('wakeLock' in navigator)) return undefined;
+    let lock = null;
+    let cancelled = false;
+    const acquire = () => {
+      if (document.visibilityState !== 'visible') return;
+      navigator.wakeLock.request('screen').then(sentinel => {
+        if (cancelled) sentinel.release().catch(() => {});else lock = sentinel;
+      }).catch(() => {});
+    };
+    acquire();
+    document.addEventListener('visibilitychange', acquire);
+    return () => {
+      cancelled = true;
+      document.removeEventListener('visibilitychange', acquire);
+      if (lock) lock.release().catch(() => {});
+    };
+  }, [prefs.wakeLock, Boolean(winner)]);
 
   // Source de vérité synchrone : chaque action lit l'état le plus récent,
   // même si deux appuis arrivent avant le rendu suivant.
@@ -123,15 +203,19 @@ function GameScreen({
       show: false
     })), 2000);
   }
-  function declareWinner(team, teams, startedAt, label, delay) {
+  function declareWinner(team, teams, s, delay, throwsAfter) {
     schedule(() => {
       clearCurrentGame();
       setEventPopup(null);
       setWinner({
         team,
         teams,
-        duration: Date.now() - (startedAt || Date.now()),
-        gameLabel: label || gameLabel
+        throws: throwsAfter,
+        rules: s.rules || initialRules,
+        startRule: s.startRule || startRule,
+        match: s.match ? recordMancheWin(s.match, team.id) : null,
+        duration: Date.now() - (s.startedAt || Date.now()),
+        gameLabel: s.gameLabel || gameLabel
       });
     }, delay);
   }
@@ -157,7 +241,7 @@ function GameScreen({
     commit(result.nextState);
     const reaction = getThrowReaction(result, targetScore);
     if (reaction.type === 'winner') {
-      declareWinner(reaction.team, result.newTeams, s.startedAt, s.gameLabel, 300);
+      declareWinner(reaction.team, result.newTeams, s, 300, result.nextState.throws);
     } else if (reaction.type === 'popup') {
       schedule(() => setEventPopup(reaction.popup), reaction.delay || 50);
     } else if (reaction.type === 'toast') {
@@ -173,7 +257,7 @@ function GameScreen({
     if (reaction.type === 'eliminated') {
       schedule(() => setEventPopup(reaction.popup), reaction.popupDelay || 50);
       if (reaction.winnerTeam) {
-        declareWinner(reaction.winnerTeam, result.newTeams, s.startedAt, s.gameLabel, reaction.winnerDelay || 2200);
+        declareWinner(reaction.winnerTeam, result.newTeams, s, reaction.winnerDelay || 2200, result.nextState.throws);
       }
     } else if (reaction.type === 'toast') {
       showToast(reaction.message);
@@ -187,13 +271,52 @@ function GameScreen({
     commit(result.nextState);
     showToast('Lancer annulé');
   }
-  function restartFresh() {
+  function toSetupTeam(team) {
+    return {
+      id: team.id,
+      name: team.name,
+      color: team.color,
+      handicap: team.handicap || 0,
+      players: team.players || []
+    };
+  }
+  function launch(nextState) {
     clearPendingTimers();
     clearCurrentGame();
     setEventPopup(null);
     setAbandonOpen(false);
     setWinner(null);
-    commit(initState(true));
+    commit(nextState);
+  }
+  // « Recommencer la partie » (menu pause) : même ordre, même manche.
+  function restartFresh() {
+    const s = stateRef.current;
+    launch(createInitialGameState({
+      teams: s.teams.map(toSetupTeam),
+      targetScore,
+      rules: s.rules || initialRules,
+      gameLabel: s.gameLabel || gameLabel,
+      match: s.match || null,
+      startRule: s.startRule || startRule
+    }));
+  }
+  // Revanche ou manche suivante : l'ordre de passage suit la règle choisie.
+  function startNextGame(kind) {
+    if (!winner) return;
+    const rule = winner.startRule || startRule;
+    const ranked = rankTeams(winner.teams, t => t.id === winner.team.id).map(t => t.id);
+    const ordered = orderTeamsForNextGame(winner.teams.map(toSetupTeam), rule, ranked);
+    const previousMatch = winner.match;
+    let nextMatch = null;
+    if (kind === 'manche' && previousMatch) nextMatch = nextManche(previousMatch);else if (previousMatch) nextMatch = createMatch(ordered, previousMatch.winsNeeded);
+    launch(createInitialGameState({
+      teams: ordered,
+      targetScore,
+      rules: winner.rules || initialRules,
+      gameLabel: winner.gameLabel || gameLabel,
+      match: nextMatch,
+      startRule: rule
+    }));
   }
   const {
     teams,
@@ -208,7 +331,8 @@ function GameScreen({
     winner: winner,
     targetScore: targetScore,
     onNewGame: onEnd,
-    onRematch: restartFresh
+    onRematch: () => startNextGame('rematch'),
+    onNextManche: () => startNextGame('manche')
   });
   const activeRules = state.rules || initialRules;
   const scorePreview = previewScoreAfterThrow(currentTeam.score, throwScore, targetScore, activeRules, currentTeam.overflowStrikes || 0);
@@ -236,8 +360,13 @@ function GameScreen({
     teams: state.teams,
     currentTeamIdx: currentTeamIdx,
     targetScore: targetScore,
-    rules: state.rules
+    rules: state.rules,
+    match: state.match
   }), React.createElement(GameTurnPanel, {
+    rules: activeRules,
+    match: state.match,
+    prefs: prefs,
+    currentPlayer: currentPlayerName(currentTeam),
     currentTeam: currentTeam,
     round: round,
     selectedPins: selectedPins,
@@ -314,14 +443,19 @@ function WinScreen({
   winner,
   targetScore,
   onNewGame,
-  onRematch
+  onRematch,
+  onNextManche
 }) {
   const {
     team,
     teams,
     duration,
-    gameLabel
+    gameLabel,
+    match,
+    throws = []
   } = winner;
+  const matchOn = Boolean(match);
+  const matchOver = matchOn && Boolean(match.winnerId);
   const misses = team.history ? team.history.filter(entry => entry.miss).length : 0;
   // Même calcul que l'historique : points marqués / nombre total de lancers.
   const avgScore = team.totalThrows > 0 ? (team.totalScore / team.totalThrows).toFixed(1).replace('.', ',') : '0';
@@ -336,9 +470,18 @@ function WinScreen({
       winner: team.name,
       winnerColor: team.color,
       winnerIdx: teams.findIndex(t => t === team || t.name === team.name),
-      teams: teams.map(t => ({
+      match: match ? {
+        id: match.id,
+        manche: match.manche,
+        winsNeeded: match.winsNeeded,
+        wins: match.wins,
+        winnerId: match.winnerId
+      } : null,
+      teams: teams.map((t, idx) => ({
+        id: t.id,
         winner: t.name === team.name,
         eliminated: Boolean(t.eliminated),
+        players: summarizePlayers(throws, idx, t),
         name: t.name,
         color: t.color,
         score: t.score,
@@ -381,14 +524,31 @@ function WinScreen({
   }, h(Icon, {
     name: "trophy",
     size: 22
-  }), "Victoire !"), h("div", {
+  }), matchOn ? matchOver ? 'Match gagné !' : `Manche ${match.manche} gagnée` : 'Victoire !'), h("div", {
     className: "win-team",
     style: {
       '--team': team.color
     }
   }, team.name), h("div", {
     className: "win-sub"
-  }, gameLabel ? `${gameLabel}, ` : '', wonByElimination ? 'par élimination des autres équipes' : `pile ${targetScore} points`)), h("ol", {
+  }, gameLabel ? `${gameLabel}, ` : '', wonByElimination ? 'par élimination des autres équipes' : `pile ${targetScore} points`)), matchOn && h("div", {
+    className: "match-board",
+    "aria-label": "Score du match"
+  }, h("div", {
+    className: "match-board-title"
+  }, matchOver ? 'Score final du match' : `Match en ${match.winsNeeded} manches gagnantes`), h("div", {
+    className: "match-board-teams"
+  }, teams.map(t => h("span", {
+    key: t.id,
+    className: "match-board-team"
+  }, h("span", {
+    className: "dot",
+    style: {
+      '--team': t.color
+    }
+  }), t.name, h("span", {
+    className: "num"
+  }, (match.wins || {})[t.id] || 0))))), h("ol", {
     className: "ranking",
     "aria-label": "Classement"
   }, ranked.map((t, i) => h("li", {
@@ -408,7 +568,23 @@ function WinScreen({
     className: "score num"
   }, t.score)))), h(StatGrid, {
     items: stats
-  }), h("div", {
+  }), matchOn && !matchOver ? h("div", {
+    className: "win-actions"
+  }, h("button", {
+    type: "button",
+    className: "btn btn-secondary",
+    onClick: () => {
+      if (window.confirm('Arrêter le match ? Les manches jouées restent dans l’historique.')) onNewGame();
+    }
+  }, h(Icon, {
+    name: "home"
+  }), "Arr\xEAter"), h("button", {
+    type: "button",
+    className: "btn btn-primary",
+    onClick: onNextManche
+  }, h(Icon, {
+    name: "play"
+  }), "Manche ", match.manche + 1)) : h("div", {
     className: "win-actions"
   }, h("button", {
     type: "button",
@@ -430,23 +606,24 @@ function PlayerStatsScreen({
   history,
   onBack
 }) {
-  const games = history.filter(g => (g.teams || []).some(t => t.name === player.name));
-  const records = games.map(g => ({
-    game: g,
-    team: (g.teams || []).find(t => t.name === player.name)
-  })).filter(r => r.team);
-  const wins = records.filter(r => isTeamWinner(r.game, r.team)).length;
-  const totalThrows = records.reduce((a, r) => a + (r.team.totalThrows || 0), 0);
-  const totalScore = records.reduce((a, r) => a + (r.team.totalScore || 0), 0);
-  const maxThrow = Math.max(...records.map(r => r.team.maxThrow || 0), 0);
-  const totalMisses = records.reduce((a, r) => a + (r.team.misses || 0), 0);
-  const totalOverflows = records.reduce((a, r) => a + (r.team.overflows || 0), 0);
+  const records = history.map(game => ({
+    game,
+    part: participations(game).find(p => nameKey(p.name) === nameKey(player.name))
+  })).filter(r => r.part);
+  const games = records;
+  const wins = records.filter(r => r.part.won).length;
+  const totalThrows = records.reduce((a, r) => a + r.part.throws, 0);
+  const totalScore = records.reduce((a, r) => a + r.part.totalScore, 0);
+  const maxThrow = Math.max(...records.map(r => r.part.maxThrow), 0);
+  const totalMisses = records.reduce((a, r) => a + r.part.misses, 0);
+  const totalOverflows = records.reduce((a, r) => a + r.part.overflows, 0);
   const avgScore = totalThrows > 0 ? (totalScore / totalThrows).toFixed(1).replace('.', ',') : '—';
   const winStreak = (() => {
     let current = 0;
     let best = 0;
-    records.forEach(r => {
-      if (isTeamWinner(r.game, r.team)) {
+    // Historique du plus récent au plus ancien : on remonte le temps.
+    records.slice().reverse().forEach(r => {
+      if (r.part.won) {
         current += 1;
         best = Math.max(best, current);
       } else current = 0;
@@ -504,21 +681,17 @@ function PlayerStatsScreen({
     className: "section-title"
   }, "Parties"), records.map(({
     game,
-    team
+    part
   }, i) => h("div", {
     key: i,
     className: "row"
   }, h("div", null, h("div", {
     className: "row-label"
-  }, isTeamWinner(game, team) ? 'Victoire' : 'Défaite', game.label ? ` · ${game.label}` : ''), h("div", {
+  }, part.won ? 'Victoire' : 'Défaite', part.teamName !== part.name ? ` avec ${part.teamName}` : '', game.label ? ` · ${game.label}` : ''), h("div", {
     className: "row-sub"
-  }, formatDate(game.date), " \xB7 ", team.totalThrows || 0, " lancers")), h("div", {
-    className: "num",
-    style: {
-      fontSize: '26px',
-      fontWeight: 600
-    }
-  }, team.score))))));
+  }, formatDate(game.date), game.match ? ` · manche ${game.match.manche}` : '', " \xB7 ", part.throws, " lancer", part.throws > 1 ? 's' : '', " \xB7 ", part.totalScore, " pts")), h("div", {
+    className: "num row-score"
+  }, part.teamScore))))));
 }
 
 function GameDetailScreen({
@@ -539,7 +712,7 @@ function GameDetailScreen({
     className: "detail-title"
   }, game.label || 'Partie sans nom'), h("div", {
     className: "detail-sub"
-  }, formatDate(game.date), game.duration ? ` · ${formatDuration(game.duration)}` : '', game.targetScore ? ` · cible ${game.targetScore}` : '')), ranked.map((t, i) => {
+  }, formatDate(game.date), game.match ? ` · manche ${game.match.manche}` : '', game.duration ? ` · ${formatDuration(game.duration)}` : '', game.targetScore ? ` · cible ${game.targetScore}` : '')), ranked.map((t, i) => {
     const isWinner = isTeamWinner(game, t);
     return h("div", {
       key: i,
@@ -578,7 +751,15 @@ function GameDetailScreen({
         label: 'Résultat',
         value: isWinner ? '1er' : t.eliminated ? 'éliminée' : `${i + 1}e`
       }]
-    }));
+    }), Array.isArray(t.players) && t.players.length > 0 && h("ul", {
+      className: "detail-players"
+    }, t.players.map(p => h("li", {
+      key: p.name
+    }, h("span", null, p.name), h("span", {
+      className: "detail-player-stats"
+    }, p.throws, " lancer", p.throws > 1 ? 's' : '', " \xB7 ", h("strong", {
+      className: "num"
+    }, p.score), " pts")))));
   })));
 }
 
@@ -611,37 +792,34 @@ function HistoryScreen({
   }
   const globalStats = useMemo(() => {
     if (!history.length) return null;
-    const wins = {};
-    history.forEach(g => {
-      wins[g.winner] = (wins[g.winner] || 0) + 1;
-    });
-    const topWinner = Object.entries(wins).sort((a, b) => b[1] - a[1])[0];
     const durations = history.filter(g => g.duration);
     const avgDuration = durations.length ? durations.reduce((a, g) => a + g.duration, 0) / durations.length : 0;
     const longestGame = durations.length ? Math.max(...durations.map(g => g.duration)) : 0;
     const ps = {};
     history.forEach(g => {
-      (g.teams || []).forEach(t => {
-        if (!ps[t.name]) ps[t.name] = {
-          name: t.name,
-          color: t.color,
+      participations(g).forEach(part => {
+        const key = nameKey(part.name);
+        if (!ps[key]) ps[key] = {
+          name: part.name,
+          color: part.color,
           games: 0,
           wins: 0,
           totalThrows: 0,
           totalScore: 0
         };
-        const p = ps[t.name];
+        const p = ps[key];
         p.games++;
-        if (isTeamWinner(g, t)) p.wins++;
-        p.totalThrows += t.totalThrows || 0;
-        p.totalScore += t.totalScore || 0;
+        if (part.won) p.wins++;
+        p.totalThrows += part.throws;
+        p.totalScore += part.totalScore;
       });
     });
+    const playerStats = Object.values(ps).sort((a, b) => b.wins - a.wins || b.wins / b.games - a.wins / a.games);
     return {
-      topWinner,
+      topWinner: playerStats.length && playerStats[0].wins > 0 ? [playerStats[0].name, playerStats[0].wins] : null,
       avgDuration,
       longestGame,
-      playerStats: Object.values(ps).sort((a, b) => b.wins - a.wins || b.wins / b.games - a.wins / a.games),
+      playerStats,
       total: history.length
     };
   }, [history]);
@@ -700,7 +878,7 @@ function HistoryScreen({
     className: "history-game-label"
   }, game.label || 'Partie sans nom'), h("div", {
     className: "history-item-date"
-  }, formatDate(game.date), game.duration > 0 ? ` · ${formatDuration(game.duration)}` : ''), h("div", {
+  }, formatDate(game.date), game.match ? ` · manche ${game.match.manche}` : '', game.duration > 0 ? ` · ${formatDuration(game.duration)}` : ''), h("div", {
     className: "history-item-teams"
   }, rankTeams(game.teams || [], t => isTeamWinner(game, t)).map((t, i) => h("span", {
     key: i,
@@ -774,7 +952,9 @@ function HistoryScreen({
 }
 
 function SettingsScreen({
-  onBack
+  onBack,
+  prefs = DEFAULT_PREFS,
+  onChangePrefs = () => {}
 }) {
   const [storageSize, setStorageSize] = useState('…');
   useEffect(() => {
@@ -808,6 +988,53 @@ function SettingsScreen({
   }), h("div", {
     className: "scroll"
   }, h("section", {
+    className: "section"
+  }, h("h2", {
+    className: "section-title"
+  }, "Pendant la partie"), h("div", {
+    className: "row"
+  }, h("div", null, h("div", {
+    className: "row-label"
+  }, "Aide en fin de partie"), h("div", {
+    className: "row-sub"
+  }, "Montre la quille gagnante et celles qui font d\xE9passer")), h(Toggle, {
+    value: prefs.helpOn,
+    onChange: value => onChangePrefs({
+      helpOn: value
+    }),
+    label: "Aide en fin de partie"
+  })), h("div", {
+    className: "row"
+  }, h("div", null, h("div", {
+    className: "row-label"
+  }, "Garder l'\xE9cran allum\xE9"), h("div", {
+    className: "row-sub"
+  }, 'wakeLock' in navigator ? "Le t\xE9l\xE9phone ne se met pas en veille" : "Non g\xE9r\xE9 par ce navigateur (iOS 16.4 minimum)")), h(Toggle, {
+    value: prefs.wakeLock,
+    onChange: value => onChangePrefs({
+      wakeLock: value
+    }),
+    label: "Garder l'\xE9cran allum\xE9 pendant la partie"
+  })), h("div", {
+    className: "row row-stack"
+  }, h("div", null, h("div", {
+    className: "row-label"
+  }, "Disposition des quilles"), h("div", {
+    className: "row-sub"
+  }, prefs.pinLayout === 'field' ? "Comme sur le terrain : 7 9 8 / 5 11 12 6 / 3 10 4 / 1 2" : "Dans l'ordre, de 1 \xE0 12")), h(ChipSelect, {
+    label: "Disposition des quilles",
+    value: prefs.pinLayout,
+    onChange: value => onChangePrefs({
+      pinLayout: value
+    }),
+    options: [{
+      value: 'numeric',
+      label: 'De 1 à 12'
+    }, {
+      value: 'field',
+      label: 'Comme sur le terrain'
+    }]
+  }))), h("section", {
     className: "section"
   }, h("h2", {
     className: "section-title"
@@ -998,14 +1225,39 @@ function App() {
   const [resumeState, setResumeState] = useState(null);
   const [histCount, setHistCount] = useState(() => loadHistory().length);
   const [savedGame, setSavedGame] = useState(() => loadCurrentGame());
-  function startGame(teams, targetScore, rules, gameLabel = '') {
+  const [prefs, setPrefs] = useState(() => loadPrefs());
+  function updatePrefs(next) {
+    const merged = {
+      ...prefs,
+      ...next
+    };
+    setPrefs(merged);
+    savePrefs(merged);
+  }
+  function startGame(teams, targetScore, rules, gameLabel = '', options = {}) {
+    const format = options.format || 1;
+    const startRule = options.startRule || 'loser';
+    saveLastSetup({
+      targetScore,
+      ...rules,
+      format,
+      startRule,
+      teams: teams.map(team => ({
+        name: team.name,
+        color: team.color,
+        handicap: team.handicap || 0,
+        players: team.players || []
+      }))
+    });
     clearCurrentGame();
     setResumeState(null);
     setGameConfig({
       teams,
       targetScore,
       rules,
-      gameLabel
+      gameLabel,
+      match: createMatch(teams, format),
+      startRule
     });
     setScreen('game');
   }
@@ -1017,7 +1269,9 @@ function App() {
       teams: s.teams,
       targetScore: s.targetScore,
       rules: s.rules,
-      gameLabel: s.gameLabel || ''
+      gameLabel: s.gameLabel || '',
+      match: s.match || null,
+      startRule: s.startRule || 'loser'
     });
     setScreen('game');
   }
@@ -1047,11 +1301,17 @@ function App() {
     historyCount: histCount,
     savedGame: savedGame
   });
-  if (screen === 'setup') return React.createElement(SetupScreen, {
-    onBack: () => setScreen('home'),
-    onStart: startGame
-  });
+  if (screen === 'setup') {
+    const lastSetup = loadLastSetup();
+    return React.createElement(SetupScreen, {
+      onBack: () => setScreen('home'),
+      onStart: startGame,
+      lastSetup,
+      knownNames: collectKnownNames(loadHistory(), lastSetup)
+    });
+  }
   if (screen === 'game' && gameConfig) return React.createElement(GameScreen, _extends({}, gameConfig, {
+    prefs: prefs,
     onEnd: endGame,
     onPause: pauseGame,
     resumeState: resumeState
@@ -1063,7 +1323,9 @@ function App() {
     }
   });
   if (screen === 'settings') return React.createElement(SettingsScreen, {
-    onBack: () => setScreen('home')
+    onBack: () => setScreen('home'),
+    prefs,
+    onChangePrefs: updatePrefs
   });
   return null;
 }

@@ -84,7 +84,7 @@
       teamColor,
       data
     } = popup;
-    const penaltyText = data.mode === '0' ? 'Le score retombe à 0.' : data.mode === 'half' ? 'Le score retombe à la moitié.' : 'Le score retombe à 25, comme le veut la règle.';
+    const penaltyText = data.mode === '0' ? 'Le score retombe à 0.' : data.mode === 'half' ? 'Le score retombe à la moitié.' : `Le score retombe à ${data.newScore}, la moitié de la cible.`;
     const cfgs = {
       overflow_penalized: {
         tone: 'danger',

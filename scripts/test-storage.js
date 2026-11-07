@@ -80,24 +80,44 @@ assert.equal(storage.loadCurrentGame(local), null);
 local.setItem(storage.KEY_HISTORY, JSON.stringify({ not: 'an array' }));
 assert.deepEqual(storage.loadHistory(local), []);
 
-const manyGames = Array.from({ length: 60 }, (_, index) => ({
+const manyGames = Array.from({ length: 210 }, (_, index) => ({
   winner: `Winner ${index}`,
   teams: [{ name: 'Alpha', score: 50 }, { name: 'Beta', score: index }],
 }));
 storage.saveHistory(manyGames, local);
-assert.equal(storage.loadHistory(local).length, 50);
+assert.equal(storage.loadHistory(local).length, 200);
 assert.equal(storage.loadHistory(local)[0].winner, 'Winner 0');
-assert.equal(storage.loadHistory(local)[49].winner, 'Winner 49');
+assert.equal(storage.loadHistory(local)[199].winner, 'Winner 199');
 
 storage.addGameToHistory({
   winner: 'Fresh',
   teams: [{ name: 'Fresh', score: 50 }, { name: 'Old', score: 1 }],
 }, local);
-assert.equal(storage.loadHistory(local).length, 50);
+assert.equal(storage.loadHistory(local).length, 200);
 assert.equal(storage.loadHistory(local)[0].winner, 'Fresh');
 
 storage.clearAll(local);
 assert.equal(storage.loadCurrentGame(local), null);
 assert.deepEqual(storage.loadHistory(local), []);
+
+// Préférences : valeurs par défaut, puis fusion.
+assert.deepEqual(storage.loadPrefs(local), { helpOn: true, wakeLock: true, pinLayout: 'numeric' });
+storage.savePrefs({ pinLayout: 'field' }, local);
+assert.deepEqual(storage.loadPrefs(local), { helpOn: true, wakeLock: true, pinLayout: 'field' });
+local.setItem(storage.KEY_PREFS, '{oops');
+assert.equal(storage.loadPrefs(local).helpOn, true);
+
+// Derniers réglages : validés au chargement.
+assert.equal(storage.loadLastSetup(local), null);
+storage.saveLastSetup({ targetScore: 40, teams: [{ name: 'A', players: ['Léo'] }, { name: 'B' }] }, local);
+assert.equal(storage.loadLastSetup(local).targetScore, 40);
+storage.saveLastSetup({ teams: [{ name: 'Seule' }] }, local);
+assert.equal(storage.loadLastSetup(local), null);
+
+// Noms connus : équipes et joueurs, sans doublon ni nom par défaut.
+assert.deepEqual(storage.collectKnownNames([
+  { teams: [{ name: 'Les enfants', players: [{ name: 'Léo' }, { name: 'Emma' }] }, { name: 'Équipe 2' }] },
+  { teams: [{ name: 'les enfants' }, { name: 'Papa' }] },
+], { teams: [{ name: 'Mamie', players: ['emma', 'Zoé'] }] }), ['Emma', 'Léo', 'Les enfants', 'Mamie', 'Papa', 'Zoé']);
 
 console.log('Storage tests passed');

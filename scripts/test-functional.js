@@ -108,7 +108,7 @@ async function startGame(page, baseUrl, options = {}) {
     await page.getByRole('button', { name: String(options.targetScore), exact: false }).click();
   }
   if (options.missLimit) {
-    await page.getByRole('button', { name: new RegExp(`^${options.missLimit}\\b`) }).click();
+    await page.getByRole('button', { name: new RegExp(`^${options.missLimit} \\(`) }).click();
   }
   if (options.overflowGrace) {
     await page.getByRole('button', { name: new RegExp(`\\+${options.overflowGrace} essai`) }).click();
@@ -263,7 +263,8 @@ async function testOverflowGraceAndPenalty(page, baseUrl) {
   await advanceOtherTeamWithOnePoint(page);
   await playSinglePin(page, 5);
   await closeEventPopup(page);
-  await assertScore(page, 'Alpha', '25');
+  // Cible 30 : on retombe à la moitié de la cible.
+  await assertScore(page, 'Alpha', '15');
 }
 
 async function testEliminationWin(page, baseUrl) {
@@ -347,6 +348,102 @@ async function testPauseKeepsGameAndRestartKeepsHandicap(page, baseUrl) {
   assert.equal(await page.evaluate(() => localStorage.getItem('molky_current_game_v2')), null);
 }
 
+async function testEndgameHelpAndLastChance(page, baseUrl) {
+  await startGame(page, baseUrl, { targetScore: 30, missLimit: 2 });
+  await playSinglePin(page, 12);
+  await missThrow(page);
+  await playSinglePin(page, 12);
+  // Beta n'a plus qu'un raté avant l'élimination.
+  await page.getByText('Dernier essai', { exact: true }).waitFor();
+  await page.getByText("élimine l'équipe", { exact: true }).waitFor();
+  await playSinglePin(page, 1);
+  // Alpha : 24 points, il faut 6.
+  await page.getByText('Il faut 6', { exact: true }).waitFor();
+  const help = await page.evaluate(() => ({
+    target: Array.from(document.querySelectorAll('.pin-btn.is-target')).map(el => el.textContent.trim()),
+    over: document.querySelectorAll('.pin-btn.is-over').length,
+  }));
+  assert.deepEqual(help.target, ['6']);
+  assert.equal(help.over, 6);
+}
+
+async function testPlayersRotationAndMemory(page, baseUrl) {
+  await openSetup(page, baseUrl);
+  await page.getByLabel("Nom de l'équipe 1").fill('Enfants');
+  await page.getByLabel("Nom de l'équipe 2").fill('Papa');
+  await page.getByLabel('Ajouter un joueur à Enfants').fill('Léo');
+  await page.getByLabel('Ajouter un joueur à Enfants').press('Enter');
+  await page.getByLabel('Ajouter un joueur à Enfants').fill('Emma');
+  await page.getByRole('button', { name: /Démarrer/i }).click();
+  await page.locator('.turn-player', { hasText: 'Léo' }).waitFor();
+  await playSinglePin(page, 3);
+  await missThrow(page);
+  await page.locator('.turn-player', { hasText: 'Emma' }).waitFor();
+
+  // La configuration suivante reprend équipes et joueurs.
+  page.once('dialog', dialog => dialog.accept());
+  await page.getByRole('button', { name: /pause/i }).click();
+  await page.getByRole('button', { name: /Abandonner la partie/i }).click();
+  await clickText(page, 'Nouvelle partie');
+  assert.equal(await page.getByLabel("Nom de l'équipe 1").inputValue(), 'Enfants');
+  await page.locator('.player-chip', { hasText: 'Emma' }).waitFor();
+  await page.getByRole('button', { name: /Remettre les réglages par défaut/i }).click();
+  assert.equal(await page.getByLabel("Nom de l'équipe 1").inputValue(), 'Équipe 1');
+  assert.equal(await page.locator('.player-chip').count(), 0);
+}
+
+async function testMatchTwoWinningManches(page, baseUrl) {
+  await openSetup(page, baseUrl);
+  await page.getByLabel("Nom de l'équipe 1").fill('Alpha');
+  await page.getByLabel("Nom de l'équipe 2").fill('Beta');
+  await page.getByRole('button', { name: '30', exact: true }).click();
+  await page.getByRole('button', { name: '2 manches gagnantes' }).click();
+  await page.getByRole('button', { name: /Démarrer/i }).click();
+
+  async function alphaWinsFromStart(alphaFirst) {
+    const betaPlays = () => playSinglePin(page, 1);
+    if (!alphaFirst) await betaPlays();
+    await playSinglePin(page, 12);
+    await betaPlays();
+    await playSinglePin(page, 12);
+    await betaPlays();
+    await playSinglePin(page, 6);
+  }
+
+  await alphaWinsFromStart(true);
+  await page.getByText('Manche 1 gagnée', { exact: true }).waitFor();
+  await page.getByRole('button', { name: /Manche 2/ }).click();
+  // Le dernier du classement (Beta) commence la manche suivante.
+  await page.getByText('Tour de Beta', { exact: false }).waitFor();
+  await page.locator('.turn-round', { hasText: 'manche 2' }).waitFor();
+  await alphaWinsFromStart(false);
+  await page.getByText('Match gagné !', { exact: true }).waitFor();
+  const board = await page.locator('.match-board-team', { hasText: 'Alpha' }).locator('.num').textContent();
+  assert.equal(board.trim(), '2');
+
+  await page.getByRole('button', { name: /Accueil/i }).click();
+  await page.getByRole('button', { name: /Historique/i }).click();
+  assert.equal(await page.locator('.history-item').count(), 2);
+}
+
+async function testSettingsFieldLayoutAndWakeLock(page, baseUrl) {
+  await page.goto(`${baseUrl}/index.html?prefs=${Date.now()}`);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.getByRole('button', { name: /réglages/i }).click();
+  await page.getByRole('button', { name: 'Comme sur le terrain' }).click();
+  await page.getByRole('button', { name: /Retour/ }).click();
+  const prefs = await page.evaluate(() => JSON.parse(localStorage.getItem('molky_prefs_v1')));
+  assert.equal(prefs.pinLayout, 'field');
+
+  await clickText(page, 'Nouvelle partie');
+  await page.getByRole('button', { name: /Démarrer/i }).click();
+  const rows = await page.locator('.pins-grid.is-field .pins-row').evaluateAll(list => list.map(row => row.textContent.replace(/\s+/g, ' ').trim()));
+  assert.deepEqual(rows, ['798', '511126', '3104', '12']);
+  const wakeCalls = await page.evaluate(() => window.__wakeLockCalls || 0);
+  assert.ok(wakeCalls >= 1, "l'écran doit être maintenu allumé pendant la partie");
+}
+
 async function testOfflineReload(page, baseUrl, server) {
   await page.goto(`${baseUrl}/index.html?offline=${Date.now()}`);
   await page.waitForSelector('h1');
@@ -373,6 +470,19 @@ async function main() {
       viewport: { width: 390, height: 844 },
       serviceWorkers: 'allow',
     });
+    // Simule l'API « écran allumé » pour vérifier qu'elle est bien demandée.
+    await context.addInitScript(() => {
+      window.__wakeLockCalls = 0;
+      Object.defineProperty(navigator, 'wakeLock', {
+        configurable: true,
+        value: {
+          request: () => {
+            window.__wakeLockCalls += 1;
+            return Promise.resolve({ release: () => Promise.resolve() });
+          },
+        },
+      });
+    });
     const page = await context.newPage();
     page.setDefaultTimeout(10000);
 
@@ -386,6 +496,10 @@ async function main() {
     await testHandicapClampedWhenTargetChanges(page, baseUrl);
     await testUniqueColorsAndNames(page, baseUrl);
     await testPauseKeepsGameAndRestartKeepsHandicap(page, baseUrl);
+    await testEndgameHelpAndLastChance(page, baseUrl);
+    await testPlayersRotationAndMemory(page, baseUrl);
+    await testMatchTwoWinningManches(page, baseUrl);
+    await testSettingsFieldLayoutAndWakeLock(page, baseUrl);
     await testOfflineReload(page, baseUrl, server);
 
     console.log('Functional tests passed');

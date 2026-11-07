@@ -10,11 +10,17 @@
     return pins.length === 1 ? pins[0] : pins.length;
   }
 
-  function calculateOverflowPenalty(currentScore, mode) {
+  // Mode '25' (nom historique) : on retombe à la moitié de la cible.
+  // Avec la cible officielle de 50, c'est bien 25.
+  function overflowResetScore(targetScore = 50) {
+    return Math.floor((Number(targetScore) || 50) / 2);
+  }
+
+  function calculateOverflowPenalty(currentScore, mode, targetScore = 50) {
     if (mode === '0') return 0;
     if (mode === 'half') return Math.floor(currentScore / 2);
     if (mode === 'none') return null;
-    return 25;
+    return overflowResetScore(targetScore);
   }
 
   function getNextActiveTeamIndex(teams, currentIndex) {
@@ -60,7 +66,7 @@
 
     return {
       overflow: true,
-      displayScore: calculateOverflowPenalty(afterRaw, mode),
+      displayScore: calculateOverflowPenalty(afterRaw, mode, targetScore),
       label,
     };
   }
@@ -81,7 +87,7 @@
       } else {
         overflowStrikes += 1;
         if (overflowStrikes > (activeRules.overflowGrace || 0)) {
-          newScore = calculateOverflowPenalty(scoreBefore + score, activeRules.overflowMode || '25');
+          newScore = calculateOverflowPenalty(scoreBefore + score, activeRules.overflowMode || '25', targetScore);
           overflowStrikes = 0;
           penalized = true;
         } else {
@@ -158,6 +164,7 @@
     clampHandicap,
     calculateThrowScore,
     calculateOverflowPenalty,
+    overflowResetScore,
     getNextActiveTeamIndex,
     previewScoreAfterThrow,
     calculateThrowOutcome,

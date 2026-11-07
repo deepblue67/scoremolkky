@@ -12,7 +12,8 @@
   const { ChipSelect, Toggle, Icon } = components;
   const h = React ? React.createElement : null;
   const { RulePopup } = dialogs;
-  const { clampHandicap, maxHandicapFor } = rules;
+  const { clampHandicap, maxHandicapFor, overflowResetScore } = rules;
+  const MAX_PLAYERS = 6;
 
   // Première couleur non utilisée (évite deux équipes de la même couleur).
   function nextFreeColor(teams) {
@@ -52,22 +53,45 @@
 
 function SetupScreen({
   onBack,
-  onStart
+  onStart,
+  lastSetup = null,
+  knownNames = []
 }) {
+  // Réglages par défaut, ou ceux de la dernière partie lancée.
+  function defaultTeams() {
+    return [{
+      id: 1,
+      name: 'Équipe 1',
+      color: TEAM_COLORS[0],
+      handicap: 0,
+      players: []
+    }, {
+      id: 2,
+      name: 'Équipe 2',
+      color: TEAM_COLORS[1],
+      handicap: 0,
+      players: []
+    }];
+  }
+  function teamsFromLastSetup(setup) {
+    const result = [];
+    setup.teams.slice(0, 6).forEach((team, index) => {
+      const colorOk = TEAM_COLORS.includes(team.color) && !result.some(t => t.color === team.color);
+      result.push({
+        id: index + 1,
+        name: team.name,
+        color: colorOk ? team.color : nextFreeColor(result),
+        handicap: clampHandicap(team.handicap, setup.targetScore || 50),
+        players: Array.isArray(team.players) ? team.players.filter(p => typeof p === 'string' && p.trim()).slice(0, MAX_PLAYERS) : []
+      });
+    });
+    return result;
+  }
+  const initial = lastSetup || {};
   const [gameLabel, setGameLabel] = useState('');
-  const nextId = useRef(3);
-  const [teams, setTeams] = useState([{
-    id: 1,
-    name: 'Équipe 1',
-    color: TEAM_COLORS[0],
-    handicap: 0
-  }, {
-    id: 2,
-    name: 'Équipe 2',
-    color: TEAM_COLORS[1],
-    handicap: 0
-  }]);
-  const [targetScore, setTargetScoreRaw] = useState(50);
+  const nextId = useRef(lastSetup ? lastSetup.teams.length + 1 : 3);
+  const [teams, setTeams] = useState(() => lastSetup ? teamsFromLastSetup(lastSetup) : defaultTeams());
+  const [targetScore, setTargetScoreRaw] = useState(initial.targetScore || 50);
   const setTargetScore = value => {
     setTargetScoreRaw(value);
     setTeams(t => t.map(team => ({
@@ -75,11 +99,27 @@ function SetupScreen({
       handicap: clampHandicap(team.handicap, value)
     })));
   };
-  const [eliminationOn, setEliminationOn] = useState(true);
-  const [missLimit, setMissLimit] = useState(3);
-  const [overflowGrace, setOverflowGrace] = useState(0);
-  const [overflowMode, setOverflowMode] = useState('25');
+  const [eliminationOn, setEliminationOn] = useState(initial.eliminationOn !== undefined ? initial.eliminationOn : true);
+  const [missLimit, setMissLimit] = useState(initial.missLimit || 3);
+  const [overflowGrace, setOverflowGrace] = useState(initial.overflowGrace || 0);
+  const [overflowMode, setOverflowMode] = useState(initial.overflowMode || '25');
+  const [format, setFormat] = useState(initial.format || 1);
+  const [startRule, setStartRule] = useState(initial.startRule || 'loser');
+  const [drafts, setDrafts] = useState({});
   const [popup, setPopup] = useState(null);
+  function resetAll() {
+    nextId.current = 3;
+    setTeams(defaultTeams());
+    setTargetScoreRaw(50);
+    setEliminationOn(true);
+    setMissLimit(3);
+    setOverflowGrace(0);
+    setOverflowMode('25');
+    setFormat(1);
+    setStartRule('loser');
+    setDrafts({});
+    setGameLabel('');
+  }
   const addTeam = () => {
     if (teams.length >= 6) return;
     const id = nextId.current++;
@@ -87,9 +127,28 @@ function SetupScreen({
       id,
       name: `Équipe ${t.length + 1}`,
       color: nextFreeColor(t),
-      handicap: 0
+      handicap: 0,
+      players: []
     }]);
   };
+  function addPlayer(teamId) {
+    const name = String(drafts[teamId] || '').trim();
+    if (!name) return;
+    setTeams(t => t.map(team => team.id === teamId && team.players.length < MAX_PLAYERS && !team.players.some(p => p.toLocaleLowerCase('fr-FR') === name.toLocaleLowerCase('fr-FR')) ? {
+      ...team,
+      players: [...team.players, name]
+    } : team));
+    setDrafts(d => ({
+      ...d,
+      [teamId]: ''
+    }));
+  }
+  function removePlayer(teamId, index) {
+    setTeams(t => t.map(team => team.id === teamId ? {
+      ...team,
+      players: team.players.filter((_, i) => i !== index)
+    } : team));
+  }
   const removeTeam = i => {
     if (teams.length <= 2) return;
     setTeams(t => t.filter((_, idx) => idx !== i));
@@ -116,8 +175,9 @@ function SetupScreen({
   const hasEmptyName = teams.some(t => t.name.trim().length === 0);
   const canStart = !hasEmptyName && duplicateNames.size === 0;
   const maxHandicap = maxHandicapFor(targetScore);
+  const resetScore = overflowResetScore(targetScore);
   const overflowDesc = {
-    '25': 'Le score retombe à 25. C’est la règle officielle.',
+    '25': targetScore === 50 ? 'Le score retombe à 25, la moitié de la cible. C’est la règle officielle.' : `Le score retombe à ${resetScore}, la moitié de la cible.`,
     '0': 'Le score retombe à 0. Mode sévère.',
     'half': 'Le score retombe à la moitié.',
     'none': 'Le lancer est ignoré. Mode débutant.'
@@ -139,9 +199,29 @@ function SetupScreen({
     size: 24
   })), h("div", {
     className: "topbar-title"
-  }, "Nouvelle partie"), h("span", null)), h("div", {
+  }, "Nouvelle partie"), h("button", {
+    type: "button",
+    className: "icon-btn",
+    "aria-label": "Remettre les r\xE9glages par d\xE9faut",
+    title: "R\xE9glages par d\xE9faut",
+    onClick: resetAll
+  }, h(Icon, {
+    name: "refresh",
+    size: 22
+  }))), h("datalist", {
+    id: "known-names"
+  }, knownNames.map(name => h("option", {
+    key: name,
+    value: name
+  }))), h("div", {
     className: "scroll setup-scroll"
-  }, h("section", {
+  }, lastSetup && h("p", {
+    className: "setup-memo"
+  }, "R\xE9glages de la derni\xE8re partie repris. ", h("button", {
+    type: "button",
+    className: "link-btn",
+    onClick: resetAll
+  }, "Tout remettre \xE0 z\xE9ro")), h("section", {
     className: "section"
   }, h("h2", {
     className: "section-title"
@@ -167,6 +247,8 @@ function SetupScreen({
     "aria-label": `Nom de l'équipe ${i + 1}`,
     "aria-invalid": duplicateNames.has(normalizeName(team.name)) || !team.name.trim(),
     maxLength: 30,
+    list: "known-names",
+    autoComplete: "off",
     onChange: e => updateName(i, e.target.value)
   }), h("div", {
     className: "order-btns"
@@ -223,6 +305,52 @@ function SetupScreen({
     "aria-label": `Augmenter le handicap de ${team.name}`,
     disabled: team.handicap >= maxHandicap,
     onClick: () => updateHandicap(i, team.handicap + 5)
+  }, h(Icon, {
+    name: "plus",
+    size: 18
+  })))), h("div", {
+    className: "team-players"
+  }, team.players.map((player, pi) => h("span", {
+    key: `${player}-${pi}`,
+    className: "player-chip"
+  }, h("span", {
+    className: "player-chip-order num"
+  }, pi + 1), player, h("button", {
+    type: "button",
+    className: "player-chip-remove",
+    "aria-label": `Retirer ${player} de ${team.name}`,
+    onClick: () => removePlayer(team.id, pi)
+  }, h(Icon, {
+    name: "x",
+    size: 14
+  })))), team.players.length < MAX_PLAYERS && h("form", {
+    className: "player-add",
+    onSubmit: e => {
+      e.preventDefault();
+      addPlayer(team.id);
+    }
+  }, h("input", {
+    className: "field field-sm",
+    type: "text",
+    value: drafts[team.id] || '',
+    placeholder: team.players.length ? 'Joueur suivant' : 'Ajouter un joueur (facultatif)',
+    "aria-label": `Ajouter un joueur à ${team.name}`,
+    maxLength: 24,
+    list: "known-names",
+    autoComplete: "off",
+    enterKeyHint: "done",
+    onChange: e => {
+      const value = e.target.value;
+      setDrafts(d => ({
+        ...d,
+        [team.id]: value
+      }));
+    }
+  }), h("button", {
+    type: "submit",
+    className: "stepper-btn",
+    "aria-label": `Valider le joueur pour ${team.name}`,
+    disabled: !String(drafts[team.id] || '').trim()
   }, h(Icon, {
     name: "plus",
     size: 18
@@ -308,7 +436,7 @@ function SetupScreen({
     onChange: setOverflowMode,
     options: [{
       value: '25',
-      label: 'Retombe à 25'
+      label: `Retombe à ${resetScore}`
     }, {
       value: '0',
       label: 'Retombe à 0'
@@ -342,6 +470,37 @@ function SetupScreen({
     className: "section"
   }, h("h2", {
     className: "section-title"
+  }, "Format"), h(ChipSelect, {
+    label: "Format de la partie",
+    value: format,
+    onChange: setFormat,
+    options: [{
+      value: 1,
+      label: 'Partie simple'
+    }, {
+      value: 2,
+      label: '2 manches gagnantes'
+    }, {
+      value: 3,
+      label: '3 manches gagnantes'
+    }]
+  }), h("div", {
+    className: "setting-sub"
+  }, format > 1 ? 'Qui commence la manche suivante ?' : 'Qui commence la revanche ?'), h(ChipSelect, {
+    label: "Qui commence la partie suivante",
+    value: startRule,
+    onChange: setStartRule,
+    options: [{
+      value: 'loser',
+      label: 'Le dernier du classement'
+    }, {
+      value: 'rotate',
+      label: 'Chacun son tour'
+    }]
+  })), h("section", {
+    className: "section"
+  }, h("h2", {
+    className: "section-title"
   }, "Nom de la partie"), h("input", {
     className: "field",
     type: "text",
@@ -358,12 +517,20 @@ function SetupScreen({
     type: "button",
     className: "btn btn-primary btn-block btn-lg",
     disabled: !canStart,
-    onClick: () => onStart(teams, targetScore, {
+    onClick: () => onStart(teams.map(team => ({
+      ...team,
+      name: team.name.trim(),
+      // Un joueur tapé mais pas encore validé est ajouté au démarrage.
+      players: String(drafts[team.id] || '').trim() && team.players.length < MAX_PLAYERS ? [...team.players, String(drafts[team.id]).trim()] : team.players
+    })), targetScore, {
       eliminationOn,
       missLimit,
       overflowGrace,
       overflowMode
-    }, gameLabel.trim())
+    }, gameLabel.trim(), {
+      format,
+      startRule
+    })
   }, "D\xE9marrer la partie")));
 }
 
