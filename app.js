@@ -27,7 +27,7 @@ const {
   estimateStorageSize,
   formatStorageSize
 } = MolkkyStorage;
-const APP_VERSION = 'V20260622_1407';
+const APP_VERSION = 'V20261107_1205';
 const {
   FieldDiagram
 } = MolkkyComponents;
@@ -38,8 +38,6 @@ const {
 const {
   normalizeGameRules,
   createInitialGameState,
-  resetTeamsForNewGame,
-  getRecentThrowHistory,
   applyThrowTransition,
   applyMissTransition,
   applyUndoTransition,
@@ -53,12 +51,17 @@ const {
 const {
   SetupScreen
 } = MolkkySetupScreens;
+// Gagnant identifié par drapeau (nouvelles parties) ou par nom (anciennes parties).
+function isTeamWinner(game, team) {
+  return typeof team.winner === 'boolean' ? team.winner : team.name === game.winner;
+}
 function GameScreen({
   teams: initialTeams,
   targetScore,
   rules,
   gameLabel = '',
   onEnd,
+  onPause,
   resumeState
 }) {
   const initialRules = normalizeGameRules(rules);
@@ -69,6 +72,7 @@ function GameScreen({
     gameLabel
   });
   const [state, setState] = useState(initState);
+  const stateRef = useRef(state);
   const [winner, setWinner] = useState(null);
   const [toast, setToast] = useState({
     msg: '',
@@ -79,9 +83,20 @@ function GameScreen({
   const toastTimer = useRef(null);
   const pendingTimers = useRef([]);
   useEffect(() => {
-    if (!winner) saveCurrentGame(state);
+    // Une partie terminée n'est plus sauvegardée : elle part dans l'historique.
+    if (!winner && !state.finished) saveCurrentGame(state);
   }, [state, winner]);
-  useEffect(() => () => clearPendingTimers(), []);
+  useEffect(() => () => {
+    clearPendingTimers();
+    clearTimeout(toastTimer.current);
+  }, []);
+
+  // Source de vérité synchrone : chaque action lit l'état le plus récent,
+  // même si deux appuis arrivent avant le rendu suivant.
+  function commit(nextState) {
+    stateRef.current = nextState;
+    setState(nextState);
+  }
   function schedule(fn, delay) {
     const id = setTimeout(() => {
       pendingTimers.current = pendingTimers.current.filter(timerId => timerId !== id);
@@ -105,72 +120,71 @@ function GameScreen({
       show: false
     })), 2000);
   }
-  function calcScore(pins) {
-    return calculateThrowScore(pins);
+  function declareWinner(team, teams, startedAt, label, delay) {
+    schedule(() => {
+      clearCurrentGame();
+      setEventPopup(null);
+      setWinner({
+        team,
+        teams,
+        duration: Date.now() - (startedAt || Date.now()),
+        gameLabel: label || gameLabel
+      });
+    }, delay);
   }
   function togglePin(pin) {
-    setState(s => {
-      const has = s.selectedPins.includes(pin);
-      return {
-        ...s,
-        selectedPins: has ? s.selectedPins.filter(p => p !== pin) : [...s.selectedPins, pin]
-      };
+    const s = stateRef.current;
+    if (s.finished) return;
+    const has = s.selectedPins.includes(pin);
+    commit({
+      ...s,
+      selectedPins: has ? s.selectedPins.filter(p => p !== pin) : [...s.selectedPins, pin]
     });
   }
   function confirmThrow() {
-    setState(s => {
-      const result = applyThrowTransition(s, targetScore, initialRules);
-      const reaction = getThrowReaction(result, targetScore);
-      if (reaction.type === 'winner') {
-        schedule(() => {
-          const dur = Date.now() - (s.startedAt || Date.now());
-          clearCurrentGame();
-          setWinner({
-            team: reaction.team,
-            teams: result.newTeams,
-            duration: dur,
-            gameLabel: s.gameLabel || gameLabel
-          });
-        }, 300);
-      } else if (reaction.type === 'popup') {
-        schedule(() => setEventPopup(reaction.popup), reaction.delay || 50);
-      } else if (reaction.type === 'toast') {
-        showToast(reaction.message);
-      }
-      return result.nextState;
-    });
+    const s = stateRef.current;
+    const result = applyThrowTransition(s, targetScore, initialRules);
+    if (!result.canPlay) return;
+    commit(result.nextState);
+    const reaction = getThrowReaction(result, targetScore);
+    if (reaction.type === 'winner') {
+      declareWinner(reaction.team, result.newTeams, s.startedAt, s.gameLabel, 300);
+    } else if (reaction.type === 'popup') {
+      schedule(() => setEventPopup(reaction.popup), reaction.delay || 50);
+    } else if (reaction.type === 'toast') {
+      showToast(reaction.message);
+    }
   }
   function confirmMiss() {
-    setState(s => {
-      const result = applyMissTransition(s, initialRules);
-      const reaction = getMissReaction(result);
-      if (reaction.type === 'eliminated') {
-        schedule(() => setEventPopup(reaction.popup), reaction.popupDelay || 50);
-        if (reaction.winnerTeam) schedule(() => {
-          const dur = Date.now() - (s.startedAt || Date.now());
-          clearCurrentGame();
-          setWinner({
-            team: reaction.winnerTeam,
-            teams: result.newTeams,
-            duration: dur,
-            gameLabel: s.gameLabel || gameLabel
-          });
-        }, reaction.winnerDelay || 2200);
-      } else if (reaction.type === 'toast') {
-        showToast(reaction.message);
+    const s = stateRef.current;
+    const result = applyMissTransition(s, initialRules);
+    if (!result.canPlay) return;
+    commit(result.nextState);
+    const reaction = getMissReaction(result);
+    if (reaction.type === 'eliminated') {
+      schedule(() => setEventPopup(reaction.popup), reaction.popupDelay || 50);
+      if (reaction.winnerTeam) {
+        declareWinner(reaction.winnerTeam, result.newTeams, s.startedAt, s.gameLabel, reaction.winnerDelay || 2200);
       }
-      return result.nextState;
-    });
+    } else if (reaction.type === 'toast') {
+      showToast(reaction.message);
+    }
   }
   function undoLast() {
-    setState(s => {
-      const result = applyUndoTransition(s);
-      if (!result.canUndo) return s;
-      clearPendingTimers();
-      setEventPopup(null);
-      showToast('\u21A9\uFE0F Lancer annul\u00E9');
-      return result.nextState;
-    });
+    const result = applyUndoTransition(stateRef.current);
+    if (!result.canUndo) return;
+    clearPendingTimers();
+    setEventPopup(null);
+    commit(result.nextState);
+    showToast('↩️ Lancer annulé');
+  }
+  function restartFresh() {
+    clearPendingTimers();
+    clearCurrentGame();
+    setEventPopup(null);
+    setAbandonOpen(false);
+    setWinner(null);
+    commit(initState(true));
   }
   const {
     teams,
@@ -180,23 +194,15 @@ function GameScreen({
     round
   } = state;
   const currentTeam = teams[currentTeamIdx];
-  const throwScore = calcScore(selectedPins);
-  const recentHistory = getRecentThrowHistory(throws, teams);
+  const throwScore = calculateThrowScore(selectedPins);
   if (winner) return React.createElement(WinScreen, {
     winner: winner,
     targetScore: targetScore,
     onNewGame: onEnd,
-    onRematch: () => {
-      clearCurrentGame();
-      setWinner(null);
-      setState(initState(true));
-    }
+    onRematch: restartFresh
   });
   const activeRules = state.rules || initialRules;
-  const scorePreview = previewScoreAfterThrow(currentTeam.score, throwScore, targetScore, activeRules);
-  const willOverflow = scorePreview.overflow;
-  const displayAfter = scorePreview.displayScore;
-  const overflowLabel = scorePreview.label;
+  const scorePreview = previewScoreAfterThrow(currentTeam.score, throwScore, targetScore, activeRules, currentTeam.overflowStrikes || 0);
   return React.createElement("div", {
     className: "screen game-layout"
   }, eventPopup && React.createElement(EventPopup, {
@@ -205,16 +211,15 @@ function GameScreen({
   }), abandonOpen && React.createElement(AbandonModal, {
     teams: state.teams,
     onClose: () => setAbandonOpen(false),
-    onSameTeams: () => {
-      clearCurrentGame();
-      const fresh = resetTeamsForNewGame(state.teams);
-      setState({
-        ...initState(true),
-        teams: fresh
-      });
-      setAbandonOpen(false);
+    onSameTeams: restartFresh,
+    onPause: () => {
+      clearPendingTimers();
+      saveCurrentGame(stateRef.current);
+      onPause();
     },
-    onNewGame: () => {
+    onAbandon: () => {
+      if (!window.confirm('Abandonner et effacer cette partie ?')) return;
+      clearPendingTimers();
       clearCurrentGame();
       onEnd();
     }
@@ -228,21 +233,20 @@ function GameScreen({
     round: round,
     selectedPins: selectedPins,
     throwScore: throwScore,
-    willOverflow: willOverflow,
-    overflowLabel: overflowLabel,
-    displayAfter: displayAfter,
-    recentHistory: recentHistory,
+    willOverflow: scorePreview.overflow,
+    overflowLabel: scorePreview.label,
+    displayAfter: scorePreview.displayScore,
     throwHistory: state.throws,
     teams: state.teams,
     canUndo: throws.length > 0,
+    locked: Boolean(state.finished),
+    toast: toast,
     onTogglePin: togglePin,
     onConfirmMiss: confirmMiss,
     onUndoLast: undoLast,
     onConfirmThrow: confirmThrow,
     onAbandon: () => setAbandonOpen(true)
-  }), React.createElement("div", {
-    className: `toast ${toast.show ? 'show' : ''}`
-  }, toast.msg));
+  }));
 }
 function WinScreen({
   winner,
@@ -268,7 +272,9 @@ function WinScreen({
       targetScore,
       winner: team.name,
       winnerColor: team.color,
+      winnerIdx: teams.findIndex(t => t === team || t.name === team.name),
       teams: teams.map(t => ({
+        winner: t.name === team.name,
         name: t.name,
         color: t.color,
         score: t.score,
@@ -331,7 +337,7 @@ function WinScreen({
       maxWidth: '320px'
     }
   }, React.createElement("button", {
-    className: "btn btn-ghost btn-full",
+    className: "btn btn-ghost-dark btn-full",
     onClick: onRematch
   }, "\uD83D\uDD04 Revanche"), React.createElement("button", {
     className: "btn btn-wood btn-full",
@@ -625,7 +631,7 @@ function GameDetailScreen({
       fontWeight: '700'
     }
   }, formatDate(game.date), game.duration ? ` · ${formatDuration(game.duration)}` : '')), sorted.map((t, i) => {
-    const isWinner = t.name === game.winner;
+    const isWinner = isTeamWinner(game, t);
     const statItems = [{
       l: 'Lancers',
       v: t.totalThrows || '—'
@@ -769,7 +775,7 @@ function HistoryScreen({
         };
         const p = ps[t.name];
         p.games++;
-        if (t.name === g.winner) p.wins++;
+        if (isTeamWinner(g, t)) p.wins++;
         p.totalThrows += t.totalThrows || 0;
         p.totalScore += t.totalScore || 0;
         p.maxThrow = Math.max(p.maxThrow, t.maxThrow || 0);
@@ -916,7 +922,7 @@ function HistoryScreen({
     className: "history-item-title"
   }, "\uD83C\uDFC6 ", game.winner), React.createElement("div", {
     className: "history-item-date"
-  }, formatDate(game.date))), game.duration && React.createElement("div", {
+  }, formatDate(game.date))), game.duration > 0 && React.createElement("div", {
     style: {
       fontSize: '11px',
       color: '#a07050',
@@ -928,11 +934,11 @@ function HistoryScreen({
     key: i,
     className: "history-team-pill",
     style: {
-      background: t.name === game.winner ? t.color : t.color + '22',
-      color: t.name === game.winner ? '#fff' : t.color,
+      background: isTeamWinner(game, t) ? t.color : t.color + '22',
+      color: isTeamWinner(game, t) ? '#fff' : t.color,
       border: `2px solid ${t.color}`
     }
-  }, t.name === game.winner ? '👑 ' : '', t.name, " : ", t.score))), React.createElement("div", {
+  }, isTeamWinner(game, t) ? '👑 ' : '', t.name, " : ", t.score))), React.createElement("div", {
     style: {
       fontSize: '11px',
       color: '#a07050',
@@ -1524,6 +1530,10 @@ function App() {
     setResumeState(null);
     setScreen('home');
   }
+  function pauseGame() {
+    setResumeState(null);
+    setScreen('home');
+  }
   function goHistory() {
     setHistCount(loadHistory().length);
     setScreen('history');
@@ -1546,10 +1556,14 @@ function App() {
   });
   if (screen === 'game' && gameConfig) return React.createElement(GameScreen, _extends({}, gameConfig, {
     onEnd: endGame,
+    onPause: pauseGame,
     resumeState: resumeState
   }));
   if (screen === 'history') return React.createElement(HistoryScreen, {
-    onBack: () => setScreen('home')
+    onBack: () => {
+      setHistCount(loadHistory().length);
+      setScreen('home');
+    }
   });
   if (screen === 'settings') return React.createElement(SettingsScreen, {
     onBack: () => setScreen('home')

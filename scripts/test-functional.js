@@ -179,13 +179,14 @@ async function testCurrentMatchHistory(page, baseUrl) {
   await playSinglePin(page, 1);
 
   await page.getByRole('button', { name: /historique des coups/i }).click();
-  await page.getByRole('dialog', { name: /Coups joués/i }).waitFor();
-  await page.getByText('Round 1', { exact: true }).waitFor();
-  await page.getByText('Round 2', { exact: true }).waitFor();
+  const sheet = page.getByRole('dialog', { name: /Coups joués/i });
+  await sheet.waitFor();
+  await sheet.getByText('Round 1', { exact: true }).waitFor();
+  await sheet.getByText('Round 2', { exact: true }).waitFor();
   const roundTitles = await page.locator('.match-history-round-title').allTextContents();
   assert.deepEqual(roundTitles.map(text => text.trim()), ['Round 1', 'Round 2']);
-  await page.getByText('+7', { exact: true }).waitFor();
-  await page.getByText('Raté', { exact: true }).waitFor();
+  await sheet.getByText('+7', { exact: true }).waitFor();
+  await sheet.getByText('Raté', { exact: true }).waitFor();
   await page.getByRole('button', { name: /Fermer l'historique des coups/i }).click();
 }
 
@@ -254,7 +255,10 @@ async function testOverflowGraceAndPenalty(page, baseUrl) {
   await advanceOtherTeamWithOnePoint(page);
   await assertScore(page, 'Alpha', '28');
 
-  await playSinglePin(page, 5);
+  // L'aperçu tient compte de l'essai de grâce : le score resterait à 28.
+  await selectPin(page, 5);
+  assert.equal((await page.locator('.score-col-value.overflow').textContent()).trim(), '28');
+  await validateThrow(page);
   await closeEventPopup(page);
   await assertScore(page, 'Alpha', '28');
 
@@ -275,6 +279,74 @@ async function testEliminationWin(page, baseUrl) {
   await closeEventPopup(page);
   await page.getByText('Victoire', { exact: false }).waitFor();
   await page.getByText('Alpha', { exact: false }).first().waitFor();
+}
+
+async function openSetup(page, baseUrl) {
+  await page.goto(`${baseUrl}/index.html?setup=${Date.now()}`);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.waitForSelector('h1');
+  await clickText(page, 'Nouvelle partie');
+}
+
+async function testHandicapClampedWhenTargetChanges(page, baseUrl) {
+  await openSetup(page, baseUrl);
+  const plus = page.getByRole('button', { name: /Augmenter le handicap de Équipe 1/i });
+  for (let i = 0; i < 12; i += 1) {
+    if (await plus.isDisabled()) break;
+    await plus.click();
+  }
+  assert.ok(await plus.isDisabled(), 'le bouton + doit être bloqué au maximum');
+  await page.getByText('+45 pts', { exact: true }).waitFor();
+  await page.getByRole('button', { name: '30', exact: true }).click();
+  await page.getByText('+25 pts', { exact: true }).waitFor();
+  await page.getByRole('button', { name: /Démarrer/i }).click();
+  await assertScore(page, 'Équipe 1', '25');
+}
+
+async function testUniqueColorsAndNames(page, baseUrl) {
+  await openSetup(page, baseUrl);
+  await page.getByRole('button', { name: /Ajouter une/i }).click();
+  await page.getByRole('button', { name: /Supprimer Équipe 2/i }).click();
+  await page.getByRole('button', { name: /Ajouter une/i }).click();
+  const colors = await page.locator('.team-color-dot').evaluateAll(dots => dots.map(dot => getComputedStyle(dot).backgroundColor));
+  assert.equal(new Set(colors).size, colors.length, `couleurs en double : ${colors.join(', ')}`);
+
+  await page.getByLabel("Nom de l'équipe 1").fill('Alpha');
+  await page.getByLabel("Nom de l'équipe 2").fill(' alpha ');
+  await page.getByRole('alert').waitFor();
+  assert.ok(await page.getByRole('button', { name: /Démarrer/i }).isDisabled(), 'deux noms identiques doivent bloquer le démarrage');
+  await page.getByLabel("Nom de l'équipe 2").fill('Beta');
+  assert.ok(await page.getByRole('button', { name: /Démarrer/i }).isEnabled());
+}
+
+async function testPauseKeepsGameAndRestartKeepsHandicap(page, baseUrl) {
+  await openSetup(page, baseUrl);
+  await page.getByLabel("Nom de l'équipe 1").fill('Alpha');
+  await page.getByLabel("Nom de l'équipe 2").fill('Beta');
+  await page.getByRole('button', { name: /Augmenter le handicap de Beta/i }).click();
+  await page.getByRole('button', { name: /Démarrer/i }).click();
+  await assertScore(page, 'Beta', '5');
+
+  await playSinglePin(page, 9);
+  await page.getByRole('button', { name: /pause/i }).click();
+  await page.getByRole('button', { name: /Retour à l'accueil/i }).click();
+  await page.getByText('Partie en cours', { exact: true }).waitFor();
+  await page.getByRole('button', { name: /Reprendre la partie en cours/i }).click();
+  await page.getByText('Tour de Beta', { exact: false }).waitFor();
+  await assertScore(page, 'Alpha', '9');
+
+  await page.getByRole('button', { name: /pause/i }).click();
+  await page.getByRole('button', { name: /Recommencer avec les mêmes/i }).click();
+  await page.getByText('Tour de Alpha', { exact: false }).waitFor();
+  await assertScore(page, 'Alpha', '0');
+  await assertScore(page, 'Beta', '5');
+
+  page.once('dialog', dialog => dialog.accept());
+  await page.getByRole('button', { name: /pause/i }).click();
+  await page.getByRole('button', { name: /Abandonner la partie/i }).click();
+  await page.waitForSelector('h1');
+  assert.equal(await page.evaluate(() => localStorage.getItem('molky_current_game_v2')), null);
 }
 
 async function testOfflineReload(page, baseUrl, server) {
@@ -313,6 +385,9 @@ async function main() {
     await testWinAndHistory(page, baseUrl);
     await testOverflowGraceAndPenalty(page, baseUrl);
     await testEliminationWin(page, baseUrl);
+    await testHandicapClampedWhenTargetChanges(page, baseUrl);
+    await testUniqueColorsAndNames(page, baseUrl);
+    await testPauseKeepsGameAndRestartKeepsHandicap(page, baseUrl);
     await testOfflineReload(page, baseUrl, server);
 
     console.log('Functional tests passed');

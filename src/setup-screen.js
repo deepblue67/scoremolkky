@@ -1,32 +1,91 @@
 (function (root, factory) {
-  const setupScreens = factory(root.React, root.MolkkyConstants, root.MolkkyComponents, root.MolkkyDialogs);
+  const setupScreens = factory(root.React, root.MolkkyConstants, root.MolkkyComponents, root.MolkkyDialogs, root.MolkkyRules);
 
   if (typeof module === 'object' && module.exports) {
     module.exports = setupScreens;
   }
 
   root.MolkkySetupScreens = setupScreens;
-})(typeof globalThis !== 'undefined' ? globalThis : this, function (React, constants, components, dialogs) {
-  const { useState } = React;
+})(typeof globalThis !== 'undefined' ? globalThis : this, function (React, constants, components, dialogs, rules) {
+  const { useState, useRef } = React;
   const { TEAM_COLORS } = constants;
   const { ChipSelect, Toggle } = components;
   const { RulePopup } = dialogs;
+  const { clampHandicap, maxHandicapFor } = rules;
+
+  // Première couleur non utilisée (évite deux équipes de la même couleur).
+  function nextFreeColor(teams) {
+    const used = new Set(teams.map(team => team.color));
+    return TEAM_COLORS.find(color => !used.has(color)) || TEAM_COLORS[teams.length % TEAM_COLORS.length];
+  }
+
+  function normalizeName(name) {
+    return String(name || '').trim().toLocaleLowerCase('fr-FR');
+  }
+
+  function findDuplicateNames(teams) {
+    const seen = new Set();
+    const duplicates = new Set();
+    teams.forEach(team => {
+      const key = normalizeName(team.name);
+      if (!key) return;
+      if (seen.has(key)) duplicates.add(key);
+      seen.add(key);
+    });
+    return duplicates;
+  }
+
+  function HelpBtn({
+    ruleKey,
+    onOpen
+  }) {
+    return React.createElement("button", {
+      type: "button",
+      "aria-label": "Afficher l'aide sur cette r\xE8gle",
+      onClick: () => onOpen(ruleKey),
+      style: {
+        background: 'rgba(45,80,22,0.12)',
+        border: 'none',
+        borderRadius: '50%',
+        width: '22px',
+        height: '22px',
+        cursor: 'pointer',
+        color: '#2d5016',
+        fontWeight: '900',
+        fontSize: '13px',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0
+      }
+    }, "?");
+  }
 
 function SetupScreen({
   onBack,
   onStart
 }) {
   const [gameLabel, setGameLabel] = useState('');
+  const nextId = useRef(3);
   const [teams, setTeams] = useState([{
+    id: 1,
     name: 'Équipe 1',
     color: TEAM_COLORS[0],
     handicap: 0
   }, {
+    id: 2,
     name: 'Équipe 2',
     color: TEAM_COLORS[1],
     handicap: 0
   }]);
-  const [targetScore, setTargetScore] = useState(50);
+  const [targetScore, setTargetScoreRaw] = useState(50);
+  const setTargetScore = value => {
+    setTargetScoreRaw(value);
+    setTeams(t => t.map(team => ({
+      ...team,
+      handicap: clampHandicap(team.handicap, value)
+    })));
+  };
   const [eliminationOn, setEliminationOn] = useState(true);
   const [missLimit, setMissLimit] = useState(3);
   const [overflowGrace, setOverflowGrace] = useState(0);
@@ -34,9 +93,11 @@ function SetupScreen({
   const [popup, setPopup] = useState(null);
   const addTeam = () => {
     if (teams.length >= 6) return;
+    const id = nextId.current++;
     setTeams(t => [...t, {
+      id,
       name: `Équipe ${t.length + 1}`,
-      color: TEAM_COLORS[t.length],
+      color: nextFreeColor(t),
       handicap: 0
     }]);
   };
@@ -60,31 +121,12 @@ function SetupScreen({
   } : team));
   const updateHandicap = (i, h) => setTeams(t => t.map((team, idx) => idx === i ? {
     ...team,
-    handicap: Math.max(0, Math.min(targetScore - 1, Number(h) || 0))
+    handicap: clampHandicap(h, targetScore)
   } : team));
-  const canStart = teams.every(t => t.name.trim().length > 0);
-  const HelpBtn = ({
-    ruleKey
-  }) => React.createElement("button", {
-    type: "button",
-    "aria-label": "Afficher l'aide sur cette r\xE8gle",
-    onClick: () => setPopup(ruleKey),
-    style: {
-      background: 'rgba(45,80,22,0.12)',
-      border: 'none',
-      borderRadius: '50%',
-      width: '22px',
-      height: '22px',
-      cursor: 'pointer',
-      color: '#2d5016',
-      fontWeight: '900',
-      fontSize: '13px',
-      display: 'inline-flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      flexShrink: 0
-    }
-  }, "?");
+  const duplicateNames = findDuplicateNames(teams);
+  const hasEmptyName = teams.some(t => t.name.trim().length === 0);
+  const canStart = !hasEmptyName && duplicateNames.size === 0;
+  const maxHandicap = maxHandicapFor(targetScore);
   const overflowDesc = {
     '25': 'Retombe à 25 (règle officielle)',
     '0': 'Retombe à 0 (mode sévère)',
@@ -129,7 +171,7 @@ function SetupScreen({
   }, React.createElement("div", {
     className: "card-title"
   }, "\uD83D\uDC65 \xC9quipes"), teams.map((team, i) => React.createElement("div", {
-    key: i,
+    key: team.id || i,
     className: "setup-team-row",
     style: {
       marginBottom: '12px'
@@ -152,6 +194,8 @@ function SetupScreen({
     value: team.name,
     placeholder: `Équipe ${i + 1}`,
     "aria-label": `Nom de l'équipe ${i + 1}`,
+    "aria-invalid": duplicateNames.has(normalizeName(team.name)) || !team.name.trim(),
+    maxLength: 30,
     onChange: e => updateName(i, e.target.value)
   }), React.createElement("div", {
     className: "team-order-controls"
@@ -194,7 +238,8 @@ function SetupScreen({
       letterSpacing: '0.5px'
     }
   }, "\u2696\uFE0F Handicap"), React.createElement(HelpBtn, {
-    ruleKey: "handicap"
+    ruleKey: "handicap",
+    onOpen: setPopup
   })), React.createElement("div", {
     style: {
       display: 'flex',
@@ -205,6 +250,7 @@ function SetupScreen({
   }, React.createElement("button", {
     type: "button",
     "aria-label": `Diminuer le handicap de ${team.name}`,
+    disabled: team.handicap <= 0,
     onClick: () => updateHandicap(i, team.handicap - 5),
     style: {
       width: '28px',
@@ -232,6 +278,7 @@ function SetupScreen({
   }, team.handicap > 0 ? `+${team.handicap} pts` : 'Aucun'), React.createElement("button", {
     type: "button",
     "aria-label": `Augmenter le handicap de ${team.name}`,
+    disabled: team.handicap >= maxHandicap,
     onClick: () => updateHandicap(i, team.handicap + 5),
     style: {
       width: '28px',
@@ -248,7 +295,10 @@ function SetupScreen({
       justifyContent: 'center',
       lineHeight: 1
     }
-  }, "+"))))), teams.length < 6 && React.createElement("button", {
+  }, "+"))))), duplicateNames.size > 0 && React.createElement("div", {
+    className: "field-error",
+    role: "alert"
+  }, "Deux \xE9quipes portent le m\xEAme nom : renomme-en une pour pouvoir d\xE9marrer."), teams.length < 6 && React.createElement("button", {
     className: "btn btn-ghost btn-sm",
     onClick: addTeam,
     style: {
@@ -297,7 +347,8 @@ function SetupScreen({
       gap: '6px'
     }
   }, "\u274C \xC9limination par rat\xE9s ", React.createElement(HelpBtn, {
-    ruleKey: "elimination"
+    ruleKey: "elimination",
+    onOpen: setPopup
   })), React.createElement("div", {
     style: {
       fontSize: '12px',
@@ -343,7 +394,8 @@ function SetupScreen({
       color: '#2d5016'
     }
   }, "\uD83D\uDCA5 D\xE9passement du score cible"), React.createElement(HelpBtn, {
-    ruleKey: "overflow"
+    ruleKey: "overflow",
+    onOpen: setPopup
   })), React.createElement("div", {
     style: {
       fontSize: '12px',

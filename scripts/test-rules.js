@@ -110,10 +110,28 @@ const eliminatedMiss = rules.calculateMissOutcome({ ...baseTeam, misses: 2 }, { 
 assert.equal(eliminatedMiss.newMisses, 3);
 assert.equal(eliminatedMiss.eliminated, true);
 assert.equal(eliminatedMiss.updatedTeam.eliminated, true);
-assert.equal(eliminatedMiss.updatedTeam.misses, 2);
+// Une équipe éliminée affiche bien N/N ratés (et non N-1).
+assert.equal(eliminatedMiss.updatedTeam.misses, 3);
 
 const nonEliminatingMiss = rules.calculateMissOutcome({ ...baseTeam, misses: 12 }, { eliminationOn: false, missLimit: 3 });
 assert.equal(nonEliminatingMiss.eliminated, false);
 assert.equal(nonEliminatingMiss.updatedTeam.misses, 13);
+
+// Aperçu cohérent avec les essais de grâce : le score ne bouge pas tant qu'il reste un essai.
+const gracePreview = rules.previewScoreAfterThrow(45, 10, 50, { overflowMode: '25', overflowGrace: 1 }, 0);
+assert.equal(gracePreview.overflow, true);
+assert.equal(gracePreview.displayScore, 45);
+assert.equal(rules.calculateThrowOutcome({ ...baseTeam, score: 45, overflowStrikes: 0 }, [10], 50, { overflowMode: '25', overflowGrace: 1 }).newScore, 45);
+const graceUsedPreview = rules.previewScoreAfterThrow(45, 10, 50, { overflowMode: '25', overflowGrace: 1 }, 1);
+assert.equal(graceUsedPreview.displayScore, 25);
+assert.equal(rules.calculateThrowOutcome({ ...baseTeam, score: 45, overflowStrikes: 1 }, [10], 50, { overflowMode: '25', overflowGrace: 1 }).newScore, 25);
+
+// Handicap toujours strictement sous le score cible, par pas de 5.
+assert.equal(rules.maxHandicapFor(50), 45);
+assert.equal(rules.maxHandicapFor(30), 25);
+assert.equal(rules.maxHandicapFor(75), 70);
+assert.equal(rules.clampHandicap(45, 30), 25);
+assert.equal(rules.clampHandicap(-5, 50), 0);
+assert.equal(rules.clampHandicap(10, 50), 10);
 
 console.log('Rules tests passed');

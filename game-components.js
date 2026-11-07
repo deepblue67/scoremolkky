@@ -186,10 +186,11 @@
     willOverflow,
     overflowLabel,
     displayAfter,
-    recentHistory,
     throwHistory,
     teams,
     canUndo,
+    locked,
+    toast,
     onTogglePin,
     onConfirmMiss,
     onUndoLast,
@@ -198,6 +199,7 @@
   }) {
     const [historyOpen, setHistoryOpen] = React.useState(false);
     const hasSelection = selectedPins.length > 0;
+    const playedCount = (throwHistory || []).length;
     const selectedLabel = hasSelection ? selectedPins.length === 1 ? `Quille ${selectedPins[0]}` : `${selectedPins.length} quilles` : 'Aucune quille';
     return React.createElement("div", {
       className: "game-main",
@@ -212,23 +214,32 @@
       className: "current-turn"
     }, React.createElement("div", {
       className: "turn-label"
-    }, "Tour de ", React.createElement("span", {
+    }, React.createElement("span", {
+      className: "turn-prefix"
+    }, "Tour de "), React.createElement("span", {
       className: "turn-team-name",
       style: {
         color: currentTeam.color
       }
     }, currentTeam.name), React.createElement("span", {
-      className: "turn-round-badge",
-      style: {
-        color: 'rgba(255,255,255,0.3)',
-        fontSize: '14px'
-      }
-    }, " \xB7 Round ", round))), React.createElement("div", {
-      className: "score-preview-bar",
-      style: {
-        paddingTop: '10px'
-      }
+      className: "turn-round-badge"
+    }, "Round ", round)), React.createElement("button", {
+      type: "button",
+      className: "match-history-access-btn",
+      "aria-label": `Afficher l'historique des coups, ${playedCount} coups joués`,
+      onClick: () => setHistoryOpen(true)
+    }, React.createElement("span", {
+      className: "match-history-access-icon",
+      "aria-hidden": "true"
+    }, "\u2630"), React.createElement("span", {
+      className: "match-history-access-count"
+    }, playedCount))), React.createElement("div", {
+      className: "score-preview-bar"
     }, React.createElement("div", {
+      className: `toast ${toast && toast.show ? 'show' : ''}`,
+      role: "status",
+      "aria-live": "polite"
+    }, toast ? toast.msg : ''), React.createElement("div", {
       className: `score-preview-inner ${hasSelection ? 'has-selection' : ''}`
     }, React.createElement("div", {
       className: "score-col score-col-side"
@@ -257,6 +268,7 @@
       className: `pin-btn ${selectedPins.includes(pin) ? 'selected' : ''}`,
       "aria-pressed": selectedPins.includes(pin),
       "aria-label": `Quille ${pin}`,
+      disabled: locked,
       onClick: () => onTogglePin(pin)
     }, React.createElement("span", {
       className: "check-mark",
@@ -266,6 +278,7 @@
     }, React.createElement("button", {
       className: "miss-bar-btn",
       "aria-label": "Valider un lancer rat\xE9 sans quille renvers\xE9e",
+      disabled: locked,
       onClick: onConfirmMiss
     }, "\u2717 \xA0 Rat\xE9")), React.createElement("div", {
       className: "bottom-action-row"
@@ -287,32 +300,21 @@
     }, "Annuler")), React.createElement("button", {
       className: "validate-btn",
       "aria-label": "Valider le lancer s\xE9lectionn\xE9",
-      disabled: selectedPins.length === 0,
+      disabled: locked || selectedPins.length === 0,
       onClick: onConfirmThrow
     }, "\u2713  Valider"), React.createElement("button", {
       className: "abandon-btn",
-      "aria-label": "Ouvrir les options d'abandon de partie",
+      "aria-label": "Mettre la partie en pause",
+      disabled: locked,
       onClick: onAbandon
     }, React.createElement("span", {
       className: "abandon-btn-icon"
-    }, "\uD83C\uDFF3"), React.createElement("span", {
+    }, "\u23F8"), React.createElement("span", {
       className: "abandon-btn-label"
-    }, "Abandonner"))), React.createElement("div", {
-      className: "match-history-access"
-    }, React.createElement("button", {
-      type: "button",
-      className: "match-history-access-btn",
-      "aria-label": `Afficher l'historique des coups, ${(throwHistory || []).length} coups joués`,
-      onClick: () => setHistoryOpen(true)
-    }, "Coups jou\xE9s", React.createElement("span", null, (throwHistory || []).length))), historyOpen && React.createElement(MatchHistorySheet, {
+    }, "Pause"))), historyOpen && React.createElement(MatchHistorySheet, {
       throws: throwHistory || [],
       teams: teams || [],
       onClose: () => setHistoryOpen(false)
-    }), React.createElement("div", {
-      style: {
-        flexShrink: 0,
-        height: 'max(4px,env(safe-area-inset-bottom))'
-      }
     }));
   }
 

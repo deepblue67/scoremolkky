@@ -8,7 +8,11 @@
     "test:storage": "node scripts/test-storage.js",
     "test:encoding": "node scripts/test-encoding.js",
     "test:functional": "node scripts/test-functional.js",
-    "test:a11y-mobile": "node scripts/test-a11y-mobile.js"
+    "test:a11y-mobile": "node scripts/test-a11y-mobile.js",
+    "test:browser": "npm run test:functional && npm run test:a11y-mobile"
   },
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "playwright": "^1.47.0"
+  }
 }

@@ -7,9 +7,9 @@ Il sert a deux usages :
 - aider le proprietaire du projet a se rappeler comment l'application fonctionne ;
 - permettre a une future intervention Codex de reprendre vite, sans redecouvrir toute l'architecture.
 
-Date de mise a jour du README : 2026-06-19.
-Version documentee de l'application : `V20260622_1407`.
-Derniere validation connue : `npm run build V20260622_1407`, puis `npm test`.
+Date de mise a jour du README : 2026-11-07.
+Version documentee de l'application : `V20261107_1205`.
+Derniere validation connue : `npm run build V20261107_1205`, puis `npm test`.
 
 ## Resume court
 
@@ -54,6 +54,7 @@ Fonctionnalites principales :
 - detecter une victoire par elimination ;
 - sauvegarder la partie en cours ;
 - reprendre une partie sauvegardee ;
+- mettre une partie en pause (bouton `Pause`) : reprendre, retourner a l'accueil sans perdre la partie, recommencer avec les memes equipes (handicaps conserves) ou abandonner (partie effacee, avec confirmation) ;
 - conserver l'historique des parties terminees ;
 - retrouver le libelle d'une partie dans l'historique et le detail ;
 - afficher des statistiques ;
@@ -189,7 +190,7 @@ Ces fichiers sont servis par GitHub Pages et doivent etre publies.
 La version courante est :
 
 ```text
-V20260622_1407
+V20261107_1205
 ```
 
 Elle est synchronisee dans :
@@ -200,6 +201,12 @@ Elle est synchronisee dans :
 - `app.js`.
 
 Le cache du service worker utilise cette version pour construire son nom de cache.
+
+Strategie du service worker (depuis `V20261107_1205`) :
+
+- installation atomique (`cache.addAll`) avec `cache: 'reload'` : soit tous les fichiers de la version sont en cache, soit l'ancienne version reste active ;
+- en ligne : reseau d'abord, le cache est rafraichi au passage (une nouvelle version est visible des le premier lancement) ;
+- reseau lent (plus de 3 s) ou hors ligne : reponse depuis le cache.
 
 Si une nouvelle version est publiee sans changer la version, un navigateur ou un telephone peut continuer a servir l'ancien cache.
 
@@ -212,7 +219,7 @@ npm run build VYYYYMMDD_HHMM
 Exemple :
 
 ```bash
-npm run build V20260622_1407
+npm run build V20261107_1205
 ```
 
 ## Commandes
@@ -265,7 +272,9 @@ Suites actuelles :
 | `test:storage` | `scripts/test-storage.js` | Verifie `localStorage`, historique et nettoyage. |
 | `test:encoding` | `scripts/test-encoding.js` | Detecte les problemes d'encodage/mojibake. |
 | `test:functional` | `scripts/test-functional.js` | Lance un serveur local et teste l'app dans Chromium via Playwright. |
-| `test:a11y-mobile` | `scripts/test-a11y-mobile.js` | Verifie viewport mobile, cibles tactiles, focus clavier et historique au clavier. |
+| `test:a11y-mobile` | `scripts/test-a11y-mobile.js` | Verifie viewport mobile, cibles tactiles, focus clavier, historique au clavier et absence de chevauchement quilles / Rate / Valider sur 320x568, 375x667, 390x664 et 430x739. |
+
+Les tests navigateur demandent Playwright : `npm install` (declare en `devDependencies`) puis `npx playwright install chromium`.
 
 Parcours fonctionnels couverts :
 
@@ -402,6 +411,7 @@ npm test
 | V20260619_2314 | Compactage mobile de l'accueil pour afficher les actions sans scroll et stabilisation de la saisie des equipes sur petits ecrans. |
 | V20260619_2350 | Nouvelle livraison cache/PWA apres ajustement CSS final, pour forcer la mise a jour du service worker. |
 | V20260622_1407 | Scoreboard de partie scrollable horizontalement avec cartes lisibles pour 3 equipes et plus ; historique des coups affiche du Round 1 vers les rounds suivants. |
+| V20261107_1205 | Lot 1 corrections : quilles qui recouvraient Rate (taille adaptee a la place disponible), toast deplace sur l'apercu, bouton Coups joues dans la barre du tour, apercu correct avec essais de grace, handicap borne sous la cible, handicap conserve en recommencant, menu Pause (retour accueil sans perte), partie verrouillee apres victoire, lancer vide refuse, couleurs uniques, noms d'equipes uniques, gagnant memorise par drapeau, rates N/N a l'elimination, service worker reseau d'abord + installation atomique, nettoyage CSS, Playwright en devDependency. |
 
 ## Comment maintenir ce README
 
@@ -425,7 +435,7 @@ Les tableaux ci-dessous sont le suivi officiel.
 | Assets locaux | Ajouter React, polices, icones et manifest localement. | Fait | Haute | Necessaire pour PWA autonome. |
 | Extraction CSS | Sortir les styles de `index.html` vers `styles.css`. | Fait | Haute | Rend `index.html` maintenable. |
 | Build workflow | Ajouter `scripts/build.js` et synchroniser les fichiers generes. | Fait | Haute | Commande : `npm run build`. |
-| Version PWA | Synchroniser `APP_VERSION` entre `index.html`, `sw.js`, `src/app.js`, `app.js`. | Fait | Haute | Version actuelle `V20260622_1407`. |
+| Version PWA | Synchroniser `APP_VERSION` entre `index.html`, `sw.js`, `src/app.js`, `app.js`. | Fait | Haute | Version actuelle `V20261107_1205`. |
 | Service worker | Mettre en cache les assets locaux et permettre reload offline. | Fait | Haute | Teste via Playwright. |
 | Decoupage `rules.js` | Extraire les regles pures du Molkky. | Fait | Haute | Teste par `test:rules`. |
 | Decoupage `storage.js` | Extraire la persistance `localStorage`. | Fait | Haute | Teste par `test:storage`. |
@@ -446,6 +456,9 @@ Les tableaux ci-dessous sont le suivi officiel.
 | Historique coups en cours | Remplacer la ligne recente par une vue lisible de tous les coups de la partie. | Fait | Haute | Bottom sheet `Coups joues`, ajoutee en `V20260619_2008`. |
 | Scoreboard multi-equipes | Garder des cartes lisibles et permettre le scroll horizontal quand il y a plus de 2 equipes. | Fait | Haute | Ajoute en `V20260622_1407`, test fonctionnel 5 equipes. |
 | Ergonomie mobile accueil/setup | Faire tenir les actions d'accueil sans scroll et supprimer les debordements horizontaux de configuration. | Fait | Haute | Ajoute en `V20260619_2314`. |
+| Lot 1 corrections | Bugs de regles, de mise en page mobile et de service worker releves a l'audit du 2026-11-07. | Fait | Haute | `V20261107_1205`, tests de non-regression ajoutes. |
+| Effets de bord React | Sortir timers/toasts des fonctions `setState` ; etat lu via une ref synchrone. | Fait | Haute | `V20261107_1205`. |
+| Service worker reseau d'abord | Installation atomique, cache HTTP contourne, delai max 3 s avant repli sur le cache. | Fait | Haute | `V20261107_1205`, test offline existant. |
 | Extraire `WinScreen` | Sortir l'ecran de victoire de `src/app.js`. | A faire | Moyenne | Utile pour reduire `app.js`, pas bloquant. |
 | Extraire historique/stats | Sortir `HistoryScreen`, `GameDetailScreen`, `PlayerStatsScreen`. | A faire | Moyenne | Bon prochain chantier structurel. |
 | Extraire settings/home | Sortir `SettingsScreen` et `HomeScreen`. | Moyen terme | Moyenne | Nettoyage de lisibilite. |
@@ -483,6 +496,8 @@ Les tableaux ci-dessous sont le suivi officiel.
 | Annuler dernier lancer | Restaurer l'etat precedent complet. | Fait | Haute | Teste moteur et fonctionnel. |
 | Revanche | Relancer avec etat frais. | Fait | Haute | Corrige pendant les premieres etapes. |
 | Sauvegarde partie en cours | Reprendre apres reload. | Fait | Haute | Via `localStorage`. |
+| Pause | Revenir a l'accueil sans perdre la partie ; abandon confirme. | Fait | Haute | Menu `Pause`, teste en `V20261107_1205`. |
+| Noms et couleurs uniques | Bloquer deux equipes du meme nom ; jamais deux couleurs identiques. | Fait | Moyenne | Teste en `V20261107_1205`. |
 | Historique coups en cours | Voir les coups, rates, depassements, penalites et eliminations de la partie active. | Fait | Haute | Test fonctionnel ajoute en `V20260619_2008`, ordre chronologique des rounds en `V20260622_1407`. |
 | Historique parties | Consulter les parties terminees. | Fait | Moyenne | Test fonctionnel existant. |
 | Statistiques joueurs | Afficher stats globales par joueur/equipe. | Fait | Moyenne | Present dans l'app. |

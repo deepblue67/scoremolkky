@@ -64,7 +64,7 @@ function RulePopup({
         text: "Un joueur moins expérimenté commence avec des points d'avance."
       }, {
         heading: 'Comment ça marche',
-        text: "Le joueur avec handicap démarre à X points. Il doit atteindre 50 comme les autres, mais depuis une position avancée."
+        text: "Le joueur avec handicap démarre à X points. Il doit atteindre le score cible comme les autres, mais depuis une position avancée."
       }, {
         heading: 'Exemple',
         text: "Handicap 10 → le joueur commence à 10 pts. Il n'a besoin que de 40 pts supplémentaires."
@@ -226,7 +226,7 @@ function EventPopup({
         text: `${teamName} ne peut plus jouer`
       }],
       explanation: `Un joueur qui rate ${data.limit || 3} lancers de suite est éliminé. Un raté = aucune quille renversée. Le compteur repart à zéro dès qu'une quille tombe.`,
-      tip: `💡 Les autres joueurs continuent jusqu'à la victoire.`
+      tip: data.winnerName ? `🏆 ${data.winnerName} remporte la partie !` : `💡 Les autres équipes continuent jusqu'à la victoire.`
     }
   };
   const cfg = cfgs[type];
@@ -352,8 +352,19 @@ function AbandonModal({
   teams,
   onClose,
   onSameTeams,
-  onNewGame
+  onPause,
+  onAbandon
 }) {
+  const secondaryBtn = {
+    background: 'rgba(255,255,255,0.07)',
+    border: '1px solid rgba(255,255,255,0.14)',
+    borderRadius: '14px',
+    padding: '13px',
+    color: 'rgba(255,255,255,0.85)',
+    fontFamily: "'Fredoka One',cursive",
+    fontSize: '15px',
+    cursor: 'pointer'
+  };
   return React.createElement("div", {
     style: {
       position: 'fixed',
@@ -373,7 +384,7 @@ function AbandonModal({
       background: '#1a2e0d',
       border: '1px solid rgba(255,255,255,0.1)',
       borderRadius: '24px 24px 0 0',
-      padding: '28px 20px 36px',
+      padding: '24px 20px max(28px, env(safe-area-inset-bottom))',
       width: '100%',
       maxWidth: '480px',
       animation: 'slideUp 0.3s cubic-bezier(0.34,1.2,0.64,1)'
@@ -382,14 +393,9 @@ function AbandonModal({
   }, React.createElement("div", {
     style: {
       textAlign: 'center',
-      marginBottom: '22px'
+      marginBottom: '18px'
     }
   }, React.createElement("div", {
-    style: {
-      fontSize: '38px',
-      marginBottom: '10px'
-    }
-  }, "\uD83C\uDFF3\uFE0F"), React.createElement("div", {
     id: "abandon-dialog-title",
     style: {
       fontFamily: "'Fredoka One',cursive",
@@ -397,12 +403,12 @@ function AbandonModal({
       color: '#fff',
       marginBottom: '6px'
     }
-  }, "Abandonner la partie ?"), React.createElement("div", {
+  }, "\u23F8 Partie en pause"), React.createElement("div", {
     style: {
       fontSize: '13px',
-      color: 'rgba(255,255,255,0.4)'
+      color: 'rgba(255,255,255,0.55)'
     }
-  }, "Que veux-tu faire ensuite ?")), React.createElement("div", {
+  }, "Que veux-tu faire ?")), React.createElement("div", {
     style: {
       display: 'flex',
       gap: '8px',
@@ -441,9 +447,9 @@ function AbandonModal({
       gap: '10px'
     }
   }, React.createElement("button", {
-    onClick: onSameTeams,
+    onClick: onClose,
     style: {
-      background: 'linear-gradient(135deg,#c8854a,#a0622a)',
+      background: 'linear-gradient(135deg,#4caf50,#2d7a2d)',
       border: 'none',
       borderRadius: '14px',
       padding: '15px',
@@ -451,33 +457,28 @@ function AbandonModal({
       fontFamily: "'Fredoka One',cursive",
       fontSize: '16px',
       cursor: 'pointer',
-      boxShadow: '0 4px 0 #6a3d10'
+      boxShadow: '0 4px 0 #1a4d1a'
     }
-  }, "\uD83D\uDD04 Rejouer avec les m\xEAmes \xE9quipes"), React.createElement("button", {
-    onClick: onNewGame,
-    style: {
-      background: 'rgba(255,255,255,0.07)',
-      border: '1px solid rgba(255,255,255,0.14)',
-      borderRadius: '14px',
-      padding: '13px',
-      color: 'rgba(255,255,255,0.75)',
-      fontFamily: "'Fredoka One',cursive",
-      fontSize: '15px',
-      cursor: 'pointer'
-    }
-  }, "\uD83C\uDFE0 Nouvelle partie / Accueil"), React.createElement("button", {
-    onClick: onClose,
+  }, "\u25B6 Reprendre la partie"), React.createElement("button", {
+    onClick: onPause,
+    style: secondaryBtn
+  }, "\uD83C\uDFE0 Retour \xE0 l'accueil (partie sauvegard\xE9e)"), React.createElement("button", {
+    onClick: onSameTeams,
+    style: secondaryBtn
+  }, "\uD83D\uDD04 Recommencer avec les m\xEAmes \xE9quipes"), React.createElement("button", {
+    onClick: onAbandon,
     style: {
       background: 'transparent',
-      border: 'none',
-      padding: '10px',
-      color: 'rgba(255,255,255,0.3)',
+      border: '1px solid rgba(231,76,60,0.45)',
+      borderRadius: '14px',
+      padding: '12px',
+      color: '#ff8a7a',
       fontFamily: "'Nunito',sans-serif",
       fontSize: '14px',
       fontWeight: '800',
       cursor: 'pointer'
     }
-  }, "Continuer la partie"))));
+  }, "\uD83C\uDFF3\uFE0F Abandonner la partie (effac\xE9e)"))));
 }
 
   return {

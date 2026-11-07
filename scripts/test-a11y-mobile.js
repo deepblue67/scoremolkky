@@ -157,6 +157,26 @@ async function assertPrimaryHomeActionsVisible(page) {
   assert.deepEqual(failures, [], 'home: primary actions should be visible without scrolling');
 }
 
+// Les quilles ne doivent jamais recouvrir l'aperçu, « Raté » ou les actions.
+async function assertGameControlsDoNotOverlap(page, label) {
+  const report = await page.evaluate(() => {
+    const rect = el => el.getBoundingClientRect();
+    const overlap = (a, b) => a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1;
+    const pins = Array.from(document.querySelectorAll('.pin-btn')).map(rect);
+    const others = ['.score-preview-inner', '.miss-bar-btn', '.validate-btn', '.current-turn']
+      .map(sel => [sel, document.querySelector(sel)])
+      .filter(([, el]) => el)
+      .map(([sel, el]) => [sel, rect(el)]);
+    const hits = [];
+    pins.forEach((pin, i) => others.forEach(([sel, r]) => {
+      if (overlap(pin, r)) hits.push(`quille ${i + 1} / ${sel}`);
+    }));
+    return { hits, minPin: Math.round(Math.min(...pins.map(p => Math.min(p.width, p.height)))) };
+  });
+  assert.deepEqual(report.hits, [], `${label}: chevauchements`);
+  assert.ok(report.minPin >= 44, `${label}: quilles trop petites (${report.minPin}px)`);
+}
+
 async function seedHistory(page) {
   await page.evaluate(() => {
     localStorage.clear();
@@ -197,6 +217,14 @@ async function auditHomeAndSetup(page, baseUrl) {
   await page.getByText('Tour de Alpha', { exact: false }).waitFor();
   await assertNoHorizontalOverflow(page, 'game');
   await assertTouchTargets(page, 'game');
+  await assertGameControlsDoNotOverlap(page, 'game 320x568');
+
+  for (const [width, height] of [[375, 667], [390, 664], [430, 739]]) {
+    await page.setViewportSize({ width, height });
+    await page.waitForTimeout(100);
+    await assertGameControlsDoNotOverlap(page, `game ${width}x${height}`);
+  }
+  await page.setViewportSize({ width: 320, height: 568 });
 }
 
 async function auditHistoryKeyboard(page, baseUrl) {

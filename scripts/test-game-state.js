@@ -66,7 +66,8 @@ const reset = gameState.resetTeamsForNewGame([
 ]);
 
 assert.equal(reset[0].handicap, 10);
-assert.equal(reset[0].score, 0);
+// « Recommencer avec les mêmes équipes » conserve le handicap.
+assert.equal(reset[0].score, 10);
 assert.equal(reset[0].misses, 0);
 assert.equal(reset[0].overflowStrikes, 0);
 assert.equal(reset[0].totalThrows, 0);
@@ -170,5 +171,45 @@ assert.equal(undoTransition.nextState.throws.length, 0);
 assert.equal(undoTransition.nextState.teams[0].score, 0);
 assert.equal(undoTransition.nextState.teams[0].totalThrows, 0);
 assert.deepEqual(undoTransition.nextState.teams[0].history, []);
+
+// Lancer sans quille sélectionnée : refusé (ne compte ni comme lancer ni comme raté).
+const emptyThrowState = gameState.createInitialGameState({
+  teams: [{ name: 'Alpha' }, { name: 'Beta' }],
+  targetScore: 50,
+});
+const emptyThrow = gameState.applyThrowTransition(emptyThrowState, 50);
+assert.equal(emptyThrow.canPlay, false);
+assert.equal(emptyThrow.nextState, emptyThrowState);
+
+// Victoire : la partie est verrouillée, plus aucun lancer ni raté accepté.
+assert.equal(winnerTransition.nextState.finished, true);
+const afterWin = { ...winnerTransition.nextState, selectedPins: [3] };
+assert.equal(gameState.applyThrowTransition(afterWin, 50).canPlay, false);
+assert.equal(gameState.applyMissTransition(afterWin).canPlay, false);
+// … mais « Annuler » déverrouille.
+assert.equal(gameState.applyUndoTransition(winnerTransition.nextState).nextState.finished, false);
+
+// Victoire par élimination : verrouillée aussi, et le popup nomme le gagnant.
+assert.equal(missTransition.nextState.finished, true);
+assert.equal(missReaction.popup.data.winnerName, 'Beta');
+assert.equal(missTransition.nextState.teams[0].misses, 1);
+
+// Élimination sans fin de partie (3 équipes) : pas de verrou, pas de gagnant.
+const threeTeams = gameState.createInitialGameState({
+  teams: [{ name: 'A' }, { name: 'B' }, { name: 'C' }],
+  targetScore: 50,
+  rules: { eliminationOn: true, missLimit: 1 },
+});
+const elimOfThree = gameState.applyMissTransition(threeTeams);
+assert.equal(elimOfThree.nextState.finished, false);
+assert.equal(gameState.getMissReaction(elimOfThree).popup.data.winnerName, null);
+
+// Handicap supérieur à la cible : ramené sous la cible au démarrage.
+const clampedStart = gameState.createInitialGameState({
+  teams: [{ name: 'Alpha', handicap: 45 }, { name: 'Beta' }],
+  targetScore: 30,
+});
+assert.equal(clampedStart.teams[0].score, 29);
+assert.equal(clampedStart.teams[0].handicap, 29);
 
 console.log('Game state tests passed');

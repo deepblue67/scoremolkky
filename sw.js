@@ -1,12 +1,18 @@
 // ═══════════════════════════════════════════════════════════
 //  Mölkky Score — Service Worker
-//  Version : V20260622_1407
-//  À mettre à jour à chaque nouvelle livraison (même valeur
-//  que APP_VERSION dans index.html)
+//  Version : V20261107_1205
+//  Mise à jour automatique par `npm run build` (même valeur
+//  que APP_VERSION dans index.html et app.js)
+//
+//  Stratégie :
+//   - en ligne  : réseau d'abord (on reçoit toujours la dernière
+//                 version), le cache est rafraîchi au passage ;
+//   - réseau lent (> 3 s) ou hors ligne : on sert le cache.
 // ═══════════════════════════════════════════════════════════
 
-const APP_VERSION = 'V20260622_1407';
+const APP_VERSION = 'V20261107_1205';
 const CACHE_NAME  = 'molky-cache-' + APP_VERSION;
+const NETWORK_TIMEOUT_MS = 3000;
 
 // Liste des ressources à mettre en cache au démarrage
 const ASSETS_TO_CACHE = [
@@ -38,19 +44,19 @@ const ASSETS_TO_CACHE = [
   './icons/icon-512.png',
 ];
 
-// ── Install : mise en cache de toutes les ressources ─────────
+// ── Install : mise en cache complète, ou rien ────────────────
+// `cache: 'reload'` contourne le cache HTTP du navigateur : on est sûr
+// de stocker les fichiers de CETTE version et pas une copie périmée.
+// `addAll` est atomique : si un fichier manque, l'installation échoue
+// et l'ancienne version (complète) reste en service.
 self.addEventListener('install', event => {
   console.log('[Mölkky SW] Install — version', APP_VERSION);
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => Promise.all(
-        ASSETS_TO_CACHE.map(asset =>
-          cache.add(asset).catch(err => {
-            console.warn('[Mölkky SW] Ressource non mise en cache :', asset, err);
-          })
-        )
+      .then(cache => cache.addAll(
+        ASSETS_TO_CACHE.map(asset => new Request(asset, { cache: 'reload' }))
       ))
-      .then(() => self.skipWaiting())   // active immédiatement
+      .then(() => self.skipWaiting())
   );
 });
 
@@ -61,7 +67,7 @@ self.addEventListener('activate', event => {
     caches.keys()
       .then(keys => Promise.all(
         keys
-          .filter(key => key !== CACHE_NAME)
+          .filter(key => key.startsWith('molky-cache-') && key !== CACHE_NAME)
           .map(key => {
             console.log('[Mölkky SW] Suppression ancien cache :', key);
             return caches.delete(key);
@@ -71,40 +77,51 @@ self.addEventListener('activate', event => {
   );
 });
 
-// ── Fetch : network-first, fallback sur le cache ─────────────
+function fromCache(request, isNavigation) {
+  return caches.open(CACHE_NAME)
+    .then(cache => cache.match(request, { ignoreSearch: true })
+      .then(hit => hit || (isNavigation ? cache.match('./index.html') : undefined)));
+}
+
+// ── Fetch : réseau d'abord (avec délai max), sinon cache ─────
 self.addEventListener('fetch', event => {
-  if (event.request.method !== 'GET') return;
+  const { request } = event;
+  if (request.method !== 'GET') return;
 
-  const requestUrl = new URL(event.request.url);
-  const isLocalRequest = requestUrl.origin === self.location.origin;
-  const isNavigation = event.request.mode === 'navigate';
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return; // ressources externes : navigateur
 
-  if (isNavigation || isLocalRequest) {
-    event.respondWith(
-      caches.match(event.request)
-        .then(cachedResponse => cachedResponse || fetch(event.request)
-          .then(networkResponse => {
-            if (networkResponse && networkResponse.status === 200) {
-              const responseClone = networkResponse.clone();
-              caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseClone));
-            }
-            return networkResponse;
-          })
-        )
-        .catch(() => isNavigation ? caches.match('./index.html') : undefined)
-    );
-    return;
-  }
+  const isNavigation = request.mode === 'navigate';
 
-  event.respondWith(
-    fetch(event.request)
-      .then(networkResponse => {
-        if (networkResponse && networkResponse.status === 200) {
-          const responseClone = networkResponse.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseClone));
+  event.respondWith(new Promise(resolve => {
+    let settled = false;
+    const finish = response => {
+      if (settled) return;
+      settled = true;
+      resolve(response);
+    };
+    const fallback = () => fromCache(request, isNavigation).then(cached => {
+      if (cached) finish(cached);
+      return cached;
+    });
+
+    // Réseau trop lent (fond du jardin…) : on répond avec le cache.
+    const timer = setTimeout(fallback, NETWORK_TIMEOUT_MS);
+
+    fetch(request)
+      .then(response => {
+        clearTimeout(timer);
+        if (response && response.ok && response.type === 'basic') {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
         }
-        return networkResponse;
+        finish(response);
       })
-      .catch(() => caches.match(event.request))
-  );
+      .catch(() => {
+        clearTimeout(timer);
+        fallback().then(cached => {
+          if (!cached) finish(Response.error());
+        });
+      });
+  }));
 });

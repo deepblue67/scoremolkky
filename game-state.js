@@ -23,10 +23,14 @@
     };
   }
 
-  function createTeamState(team) {
+  function createTeamState(team, targetScore) {
+    // Garde-fou : un handicap ne peut jamais atteindre ou dépasser le score cible.
+    const rawHandicap = Math.max(0, Number(team.handicap) || 0);
+    const handicap = targetScore ? Math.min(rawHandicap, targetScore - 1) : rawHandicap;
     return {
       ...team,
-      score: team.handicap || 0,
+      handicap,
+      score: handicap,
       misses: 0,
       overflowStrikes: 0,
       totalThrows: 0,
@@ -41,7 +45,7 @@
   function resetTeamsForNewGame(teams) {
     return teams.map(team => ({
       ...team,
-      score: 0,
+      score: team.handicap || 0,
       misses: 0,
       overflowStrikes: 0,
       totalThrows: 0,
@@ -62,7 +66,7 @@
   }) {
     return {
       gameLabel,
-      teams: teams.map(createTeamState),
+      teams: teams.map(team => createTeamState(team, targetScore)),
       currentTeamIdx: 0,
       selectedPins: [],
       throws: [],
@@ -70,6 +74,15 @@
       startedAt,
       targetScore,
       rules: normalizeGameRules(rules),
+      finished: false,
+    };
+  }
+
+  function blocked(state, reason) {
+    return {
+      canPlay: false,
+      reason,
+      nextState: state,
     };
   }
 
@@ -94,6 +107,8 @@
   }
 
   function applyThrowTransition(state, targetScore, fallbackRules) {
+    if (state.finished) return blocked(state, 'finished');
+    if (!Array.isArray(state.selectedPins) || state.selectedPins.length === 0) return blocked(state, 'no-pins');
     const activeRules = state.rules || fallbackRules || normalizeGameRules();
     const {
       teams,
@@ -108,14 +123,18 @@
     const newTeams = teams.map((entry, i) => i === currentTeamIdx ? outcome.updatedTeam : entry);
     const nextIdx = getNextActiveTeamIndex(newTeams, currentTeamIdx);
 
+    const won = outcome.newScore === targetScore && !outcome.overflow;
+
     return {
       ...outcome,
+      canPlay: true,
       team,
       teamBefore,
       activeRules,
       newTeams,
       nextState: {
         ...state,
+        finished: won,
         teams: newTeams,
         currentTeamIdx: nextIdx,
         selectedPins: [],
@@ -139,6 +158,7 @@
   }
 
   function applyMissTransition(state, fallbackRules) {
+    if (state.finished) return blocked(state, 'finished');
     const activeRules = state.rules || fallbackRules || normalizeGameRules();
     const {
       teams,
@@ -151,16 +171,19 @@
     const outcome = calculateMissOutcome(team, activeRules);
     const newTeams = teams.map((entry, i) => i === currentTeamIdx ? outcome.updatedTeam : entry);
     const nextIdx = getNextActiveTeamIndex(newTeams, currentTeamIdx);
+    const activeTeams = newTeams.filter(entry => !entry.eliminated);
 
     return {
       ...outcome,
+      canPlay: true,
       team,
       teamBefore,
       activeRules,
       newTeams,
-      activeTeams: newTeams.filter(entry => !entry.eliminated),
+      activeTeams,
       nextState: {
         ...state,
+        finished: outcome.eliminated && activeTeams.length <= 1,
         teams: newTeams,
         currentTeamIdx: nextIdx,
         selectedPins: [],
@@ -212,6 +235,7 @@
         teams: teams.map((entry, i) => i === last.teamIdx ? restored : entry),
         currentTeamIdx: last.teamIdx,
         selectedPins: [],
+        finished: false,
         throws: throws.slice(0, -1),
         round: last.roundBefore || state.round,
       },
@@ -299,11 +323,12 @@
     const limit = activeRules.missLimit || 3;
 
     if (eliminated) {
+      const winnerTeam = activeTeams.length === 1 ? activeTeams[0] : null;
       return {
         type: 'eliminated',
         popupDelay: 50,
         winnerDelay: 2200,
-        winnerTeam: activeTeams.length === 1 ? activeTeams[0] : null,
+        winnerTeam,
         popup: {
           type: 'eliminated',
           teamName: team.name,
@@ -311,6 +336,7 @@
           data: {
             misses: newMisses,
             limit,
+            winnerName: winnerTeam ? winnerTeam.name : null,
           },
         },
       };

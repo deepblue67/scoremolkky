@@ -26,7 +26,7 @@
     return currentIndex;
   }
 
-  function previewScoreAfterThrow(teamScore, throwScore, targetScore, rules) {
+  function previewScoreAfterThrow(teamScore, throwScore, targetScore, rules, overflowStrikes = 0) {
     const activeRules = rules || {};
     const afterRaw = teamScore + throwScore;
 
@@ -43,6 +43,15 @@
         overflow: true,
         displayScore: teamScore,
         label: '🚫 Ignoré',
+      };
+    }
+
+    // Un essai de grâce est encore disponible : le score ne bouge pas.
+    if ((overflowStrikes || 0) + 1 <= (activeRules.overflowGrace || 0)) {
+      return {
+        overflow: true,
+        displayScore: teamScore,
+        label: '⚠️ Grâce',
       };
     }
 
@@ -117,7 +126,7 @@
     const eliminated = Boolean(activeRules.eliminationOn && newMisses >= limit);
     const updatedTeam = {
       ...team,
-      misses: eliminated ? team.misses : newMisses,
+      misses: newMisses,
       eliminated,
       totalThrows: (team.totalThrows || 0) + 1,
       history: [...(team.history || []), {
@@ -135,7 +144,18 @@
     };
   }
 
+  // Plus grand handicap autorisé (pas de 5) strictement inférieur au score cible.
+  function maxHandicapFor(targetScore) {
+    return Math.max(0, Math.floor((Number(targetScore) - 1) / 5) * 5);
+  }
+
+  function clampHandicap(handicap, targetScore) {
+    return Math.max(0, Math.min(maxHandicapFor(targetScore), Number(handicap) || 0));
+  }
+
   return {
+    maxHandicapFor,
+    clampHandicap,
     calculateThrowScore,
     calculateOverflowPenalty,
     getNextActiveTeamIndex,
